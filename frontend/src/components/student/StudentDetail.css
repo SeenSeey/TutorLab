@@ -1,0 +1,76 @@
+.student-detail-container {
+  min-height: 100vh;
+  padding: 20px 0;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 16px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 5px 0;
+}
+
+.back-btn:hover {
+  text-decoration: underline;
+}
+
+.student-detail-header {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+  align-items: center;
+}
+
+.student-photo {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.student-photo-placeholder {
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.student-info h1 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.student-age {
+  color: #666;
+  font-size: 18px;
+  margin: 0;
+}
+
+.empty-text {
+  color: #999;
+  font-style: italic;
+}
+
+.add-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.form-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
