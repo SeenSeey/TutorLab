@@ -23,10 +23,9 @@ public class TutorServiceImpl implements TutorService {
         
         Tutor tutor = new Tutor();
         tutor.setId(tutorId);
-        tutor.setFirstName(registrationDto.getFirstName());
-        tutor.setLastName(registrationDto.getLastName());
-        tutor.setEmail(registrationDto.getEmail());
-        tutor.setPhone(registrationDto.getPhone());
+        tutor.setFullName(registrationDto.getFullName());
+        tutor.setLogin(registrationDto.getLogin());
+        tutor.setPassword(registrationDto.getPassword());
         tutor.setStudentIds(new ArrayList<>());
         
         tutorRepository.save(tutor);
@@ -51,10 +50,8 @@ public class TutorServiceImpl implements TutorService {
     private TutorResponseDto convertToResponseDto(Tutor tutor) {
         TutorResponseDto dto = new TutorResponseDto();
         dto.setId(tutor.getId());
-        dto.setFirstName(tutor.getFirstName());
-        dto.setLastName(tutor.getLastName());
-        dto.setEmail(tutor.getEmail());
-        dto.setPhone(tutor.getPhone());
+        dto.setFullName(tutor.getFullName());
+        dto.setLogin(tutor.getLogin());
         dto.setStudentIds(tutor.getStudentIds());
         return dto;
     }

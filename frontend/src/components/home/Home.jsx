@@ -16,6 +16,10 @@ function Home({ tutorId }) {
   }, [tutorId]);
 
   const loadStudents = async () => {
+    if (!tutorId || tutorId === 'temp') {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await studentApi.getStudentsByTutor(tutorId);
       setStudents(response.data);
@@ -40,9 +44,11 @@ function Home({ tutorId }) {
       <div className="container">
         <div className="home-header">
           <h1>Мои ученики</h1>
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-            + Добавить ученика
-          </button>
+          {tutorId && tutorId !== 'temp' && (
+            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+              + Добавить ученика
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -63,7 +69,7 @@ function Home({ tutorId }) {
           </div>
         )}
 
-        {showAddModal && (
+        {showAddModal && tutorId && tutorId !== 'temp' && (
           <AddStudentModal
             tutorId={tutorId}
             onClose={() => setShowAddModal(false)}

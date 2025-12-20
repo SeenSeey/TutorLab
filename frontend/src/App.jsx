@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Registration from './components/registration/Registration';
+import RegistrationChat from './components/registration/RegistrationChat';
 import Home from './components/home/Home';
 import StudentDetail from './components/student/StudentDetail';
 import './App.css';
@@ -16,29 +16,39 @@ function App() {
     }
   }, [tutorId]);
 
+  const handleRegister = (id) => {
+    setTutorId(id);
+    localStorage.setItem('tutorId', id);
+  };
+
   return (
     <Router>
       <div className="App">
         <Routes>
           <Route 
-            path="/register" 
-            element={
-              tutorId ? <Navigate to="/home" replace /> : <Registration onRegister={setTutorId} />
-            } 
-          />
-          <Route 
             path="/home" 
             element={
-              tutorId ? <Home tutorId={tutorId} /> : <Navigate to="/register" replace />
+              <>
+                {tutorId ? (
+                  <Home tutorId={tutorId} />
+                ) : (
+                  <>
+                    <div className="home-background">
+                      <Home tutorId="temp" />
+                    </div>
+                    <RegistrationChat onRegister={handleRegister} />
+                  </>
+                )}
+              </>
             } 
           />
           <Route 
             path="/student/:id" 
             element={
-              tutorId ? <StudentDetail tutorId={tutorId} /> : <Navigate to="/register" replace />
+              tutorId ? <StudentDetail tutorId={tutorId} /> : <Navigate to="/home" replace />
             } 
           />
-          <Route path="/" element={<Navigate to={tutorId ? "/home" : "/register"} replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
         </Routes>
       </div>
     </Router>

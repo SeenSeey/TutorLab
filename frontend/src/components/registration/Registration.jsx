@@ -4,10 +4,9 @@ import './Registration.css';
 
 function Registration({ onRegister }) {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
+    fullName: '',
+    login: '',
+    password: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,45 +40,34 @@ function Registration({ onRegister }) {
         <h1>Регистрация репетитора</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="firstName">Имя</label>
+            <label htmlFor="fullName">ФИО</label>
             <input
               type="text"
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
+              id="fullName"
+              name="fullName"
+              value={formData.fullName}
               onChange={handleChange}
               required
             />
           </div>
           <div className="form-group">
-            <label htmlFor="lastName">Фамилия</label>
+            <label htmlFor="login">Логин</label>
             <input
               type="text"
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
+              id="login"
+              name="login"
+              value={formData.login}
               onChange={handleChange}
               required
             />
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="password">Пароль</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="phone">Телефон</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
               onChange={handleChange}
               required
             />

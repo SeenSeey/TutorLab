@@ -3,6 +3,19 @@
   background-color: #f5f5f5;
 }
 
+.home-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  filter: blur(8px);
+  transform: scale(1.05);
+  opacity: 0.7;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
