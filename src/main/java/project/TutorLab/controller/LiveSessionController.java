@@ -13,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 import project.TutorLab.model.live.LiveSessionState;
 import project.TutorLab.service.LiveSessionService;
 import project.TutorLab.service.PdfService;
-import project.TutorLab.controller.LiveSessionWsController;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -61,7 +60,8 @@ public class LiveSessionController {
             @PathVariable String sessionId,
             @RequestParam("file") MultipartFile file) throws IOException {
 
-        if (!file.getContentType().equals("application/pdf")) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equals("application/pdf")) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Only PDF files are allowed"));
         }
@@ -128,13 +128,15 @@ public class LiveSessionController {
 
 
     @GetMapping("/slides/{sessionId}/{filename:.+}")
+    @SuppressWarnings("null")
     public ResponseEntity<Resource> getSlide(
             @PathVariable String sessionId,
             @PathVariable String filename
     ) {
         try {
             Path filePath = Paths.get(uploadDir, "slides", sessionId, filename).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
+            java.net.URI uri = filePath.toUri();
+            Resource resource = new UrlResource(uri);
 
             if (!resource.exists() || !resource.isReadable()) {
                 return ResponseEntity.notFound().build();

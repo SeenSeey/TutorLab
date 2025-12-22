@@ -42,7 +42,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public void updateSlide(String sessionId, int slideIndex) {
         LiveSessionState state = getSession(sessionId);
-        if (state == null) return;
+        if (state == null)
+            return;
         state.setCurrentSlideIndex(slideIndex);
         saveSession(state);
     }
@@ -50,7 +51,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public void addSlides(String sessionId, List<String> slideUrls) {
         LiveSessionState state = getSession(sessionId);
-        if (state == null) return;
+        if (state == null)
+            return;
         state.setSlideUrls(slideUrls);
         state.setCurrentSlideIndex(0);
         saveSession(state);
@@ -66,7 +68,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public void addDrawPath(String sessionId, int slideIndex, LiveSessionState.DrawPath path) {
         LiveSessionState state = getSession(sessionId);
-        if (state == null) return;
+        if (state == null)
+            return;
 
         state.getSlideDrawings()
                 .computeIfAbsent(slideIndex, k -> new ArrayList<>())
@@ -83,7 +86,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public void clearSlideDrawings(String sessionId, int slideIndex) {
         LiveSessionState state = getSession(sessionId);
-        if (state == null) return;
+        if (state == null)
+            return;
 
         state.getSlideDrawings().remove(slideIndex);
         saveSession(state);
@@ -95,8 +99,10 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         redisTemplate.delete(key);
     }
 
+    @SuppressWarnings("null")
     private void saveSession(LiveSessionState state) {
         String key = KEY_PREFIX + state.getSessionId();
-        redisTemplate.opsForValue().set(key, state, Duration.ofHours(6));
+        Duration duration = Duration.ofHours(6);
+        redisTemplate.opsForValue().set(key, state, duration);
     }
 }

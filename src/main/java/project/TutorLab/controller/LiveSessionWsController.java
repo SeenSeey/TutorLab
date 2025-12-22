@@ -69,6 +69,7 @@ public class LiveSessionWsController {
         );
     }
 
+    @SuppressWarnings("null")
     @MessageMapping("/session/{sessionId}/pointer")
     public void pointer(@DestinationVariable String sessionId,
                         @Payload PointerEvent event) {
@@ -78,6 +79,7 @@ public class LiveSessionWsController {
         );
     }
 
+    @SuppressWarnings("null")
     @MessageMapping("/session/{sessionId}/clear")
     public void clearSlide(@DestinationVariable String sessionId) {
         LiveSessionState session = liveSessionService.getSession(sessionId);
@@ -86,12 +88,14 @@ public class LiveSessionWsController {
         int slideIndex = session.getCurrentSlideIndex();
         liveSessionService.clearSlideDrawings(sessionId, slideIndex);
 
+        Map<String, Integer> clearMessage = Map.of("slideIndex", slideIndex);
         messagingTemplate.convertAndSend(
                 "/topic/session." + sessionId + ".clear",
-                Map.of("slideIndex", slideIndex)
+                clearMessage
         );
     }
 
+    @SuppressWarnings("null")
     @MessageMapping("/session/{sessionId}/webrtc")
     public void handleWebRTC(@DestinationVariable String sessionId,
                              @Payload Map<String, Object> signal) {
@@ -102,11 +106,15 @@ public class LiveSessionWsController {
     }
 
     // Уведомление о загрузке презентации (вызывается из REST контроллера)
+    @SuppressWarnings("null")
     public void notifyPresentationLoaded(String sessionId, List<String> slideUrls) {
         System.out.println("📢 Отправка презентации в WebSocket для сессии: " + sessionId);
+        Map<String, Object> presentationMessage = new HashMap<>();
+        presentationMessage.put("slides", slideUrls);
+        presentationMessage.put("slideCount", slideUrls.size());
         messagingTemplate.convertAndSend(
                 "/topic/session." + sessionId + ".presentation",
-                Map.of("slides", slideUrls, "slideCount", slideUrls.size())
+                presentationMessage
         );
     }
 }
