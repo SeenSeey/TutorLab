@@ -42,72 +42,72 @@ function AppContent() {
   return (
     <div className="App">
       <Routes>
-          <Route 
-            path="/home" 
-            element={
-              <>
-                {tutorId ? (
-                  <Home tutorId={tutorId} />
-                ) : (
-                  <>
-                    <div className="home-background">
-                      <Home tutorId="temp" />
-                    </div>
-                    {showLogin ? (
-                      <Login onLogin={handleLogin} />
-                    ) : (
-                      <>
-                        <RegistrationChat onRegister={handleRegister} />
-                        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                          <button 
-                            onClick={() => setShowLogin(true)}
-                            style={{
-                              background: 'transparent',
-                              border: '2px solid white',
-                              color: 'white',
-                              padding: '10px 20px',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '16px'
-                            }}
-                          >
-                            Уже есть аккаунт? Войти
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </>
-            }
-          />
-          <Route 
-            path="/settings" 
-            element={
-              tutorId ? (
-                <Settings tutorId={tutorId} onBack={() => navigate('/home')} />
+        <Route
+          path="/home"
+          element={
+            <>
+              {tutorId ? (
+                <Home tutorId={tutorId} />
               ) : (
-                <Navigate to="/home" replace />
-              )
-            } 
-          />
-          <Route 
-            path="/student/:id" 
-            element={
-              tutorId ? <StudentDetail tutorId={tutorId} /> : <Navigate to="/home" replace />
-            }
-          />
-          <Route
-            path="/live/teacher"
-            element={
-              tutorId ? <LiveLessonTeacher tutorId={tutorId} /> : <Navigate to="/home" replace />
-            }
-          />
-          <Route
-            path="/live/student/:sessionId"
-            element={<LiveLessonStudent />}
-          />
-          <Route path="/" element={<Navigate to="/home" replace />} />
+                <>
+                  <div className="home-background">
+                    <Home tutorId="temp" />
+                  </div>
+                  {showLogin ? (
+                    <Login onLogin={handleLogin} />
+                  ) : (
+                    <>
+                      <RegistrationChat onRegister={handleRegister} />
+                      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                        <button
+                          onClick={() => setShowLogin(true)}
+                          style={{
+                            background: 'transparent',
+                            border: '2px solid white',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '16px'
+                          }}
+                        >
+                          Уже есть аккаунт? Войти
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            tutorId ? (
+              <Settings tutorId={tutorId} onBack={() => navigate('/home')} />
+            ) : (
+              <Navigate to="/home" replace />
+            )
+          }
+        />
+        <Route
+          path="/student/:id"
+          element={
+            tutorId ? <StudentDetail tutorId={tutorId} /> : <Navigate to="/home" replace />
+          }
+        />
+        <Route
+          path="/live/teacher"
+          element={
+            tutorId ? <LiveLessonTeacher tutorId={tutorId} /> : <Navigate to="/home" replace />
+          }
+        />
+        <Route
+          path="/live/student/:sessionId"
+          element={<LiveLessonStudent />}
+        />
+        <Route path="/" element={<Navigate to="/home" replace />} />
       </Routes>
     </div>
   );
