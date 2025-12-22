@@ -21,6 +21,16 @@ export const studentApi = {
   getStudentsByTutor: (tutorId) => api.get(`/students/tutor/${tutorId}`),
   addMaterial: (id, materialUrl) => api.post(`/students/${id}/materials`, { materialUrl }),
   addLessonDate: (id, lessonDate) => api.post(`/students/${id}/lessons`, { lessonDate }),
+  uploadPhoto: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/students/upload-photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.photoUrl;
+  },
 };
 
 export default api;

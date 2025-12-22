@@ -1,49 +1,79 @@
 .student-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px var(--glass-shadow);
+  padding: 24px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
   text-align: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.student-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .student-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent-cyan);
+}
+
+.student-card:hover::before {
+  opacity: 1;
 }
 
 .student-card img {
   width: 100%;
-  height: 200px;
+  aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 15px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .student-card-placeholder {
   width: 100%;
-  height: 200px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  margin-bottom: 15px;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  border-radius: 16px;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 48px;
-  font-weight: bold;
+  color: var(--text-primary);
+  font-size: 56px;
+  font-weight: 700;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .student-card h3 {
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 20px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .student-card p {
-  color: #666;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: 15px;
   margin: 0;
+  font-weight: 500;
 }
 
