@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import RegistrationChat from './components/registration/RegistrationChat';
 import Home from './components/home/Home';
 import StudentDetail from './components/student/StudentDetail';
+import LiveLessonTeacher from './components/live/LiveLessonTeacher';
+import LiveLessonStudent from './components/live/LiveLessonStudent';
 import './App.css';
 
 function App() {
@@ -25,8 +27,8 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route 
-            path="/home" 
+          <Route
+            path="/home"
             element={
               <>
                 {tutorId ? (
@@ -40,13 +42,23 @@ function App() {
                   </>
                 )}
               </>
-            } 
+            }
           />
-          <Route 
-            path="/student/:id" 
+          <Route
+            path="/student/:id"
             element={
               tutorId ? <StudentDetail tutorId={tutorId} /> : <Navigate to="/home" replace />
-            } 
+            }
+          />
+          <Route
+            path="/live/teacher"
+            element={
+              tutorId ? <LiveLessonTeacher tutorId={tutorId} /> : <Navigate to="/home" replace />
+            }
+          />
+          <Route
+            path="/live/student/:sessionId"
+            element={<LiveLessonStudent />}
           />
           <Route path="/" element={<Navigate to="/home" replace />} />
         </Routes>
@@ -56,4 +68,3 @@ function App() {
 }
 
 export default App;
-

@@ -1,0 +1,145 @@
+/* src/components/live/LiveLesson.css */
+
+.live-lesson-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.live-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 20px 30px;
+  margin-bottom: 20px;
+  color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.live-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+}
+
+.slide-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.slide-controls button {
+  padding: 8px 16px;
+  border: none;
+  background: #667eea;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.slide-controls button:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.slide-controls button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.tool-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.tool-controls button {
+  padding: 10px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.tool-controls button.active,
+.tool-controls button:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border-color: #667eea;
+}
+
+.canvas-container {
+  position: relative;
+  display: inline-block;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+.slide-background {
+  display: block;
+  width: 1200px;
+  height: 675px;
+  object-fit: contain;
+  background: white;
+}
+
+.drawing-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1200px !important;
+  height: 675px !important;
+  pointer-events: auto; /* ✅ ВАЖНО для учителя */
+}
+
+/* Для студента canvas должен быть прозрачным для кликов */
+.live-lesson-container.student .drawing-canvas {
+  pointer-events: none;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

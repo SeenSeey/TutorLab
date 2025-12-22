@@ -39,15 +39,31 @@ function Home({ tutorId }) {
     navigate(`/student/${studentId}`);
   };
 
+  const handleStartLesson = () => {
+    navigate('/live/teacher');
+  };
+
   return (
     <div className="home-container">
       <div className="container">
         <div className="home-header">
           <h1>Мои ученики</h1>
           {tutorId && tutorId !== 'temp' && (
-            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-              + Добавить ученика
-            </button>
+            <div className="header-actions">
+              <button
+                className="btn btn-success"
+                onClick={handleStartLesson}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  marginRight: '12px'
+                }}
+              >
+                🎥 Начать урок
+              </button>
+              <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                + Добавить ученика
+              </button>
+            </div>
           )}
         </div>
 
@@ -82,4 +98,3 @@ function Home({ tutorId }) {
 }
 
 export default Home;
-
