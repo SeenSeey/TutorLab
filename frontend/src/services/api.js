@@ -31,6 +31,16 @@ export const studentApi = {
     });
     return response.data.photoUrl;
   },
+  uploadMaterial: async (file, tutorId, studentId) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tutorId', tutorId);
+    formData.append('studentId', studentId);
+    // Используем axios напрямую без предустановленных заголовков
+    // Браузер автоматически установит Content-Type с правильным boundary
+    const response = await axios.post(`${API_BASE_URL}/students/upload-material`, formData);
+    return response.data.fileUrl;
+  },
 };
 
 export default api;
