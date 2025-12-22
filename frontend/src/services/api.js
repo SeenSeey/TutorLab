@@ -34,6 +34,8 @@ export const studentApi = {
   getStudentsByTutor: (tutorId) => api.get(`/students/tutor/${tutorId}`),
   addMaterial: (id, materialUrl) => api.post(`/students/${id}/materials`, { materialUrl }),
   addLessonDate: (id, lessonDate) => api.post(`/students/${id}/lessons`, { lessonDate }),
+  deleteStudent: (id) => api.delete(`/students/${id}`),
+  toggleFavorite: (id, tutorId) => api.post(`/students/${id}/toggle-favorite`, { tutorId }),
   uploadPhoto: async (file) => {
     const formData = new FormData();
     formData.append('file', file);

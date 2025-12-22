@@ -10,6 +10,7 @@ public class Tutor {
     private String photoUrl;
     private String about;
     private List<String> studentIds;
+    private List<String> favoriteStudentIds;
 
     public Tutor() {
     }
@@ -76,5 +77,12 @@ public class Tutor {
     public void setAbout(String about) {
         this.about = about;
     }
-}
 
+    public List<String> getFavoriteStudentIds() {
+        return favoriteStudentIds;
+    }
+
+    public void setFavoriteStudentIds(List<String> favoriteStudentIds) {
+        this.favoriteStudentIds = favoriteStudentIds;
+    }
+}

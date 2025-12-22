@@ -6,6 +6,7 @@ import project.TutorLab.dto.StudentCardDto;
 import project.TutorLab.dto.StudentCreateDto;
 import project.TutorLab.dto.StudentResponseDto;
 import project.TutorLab.model.Student;
+import project.TutorLab.model.Tutor;
 import project.TutorLab.repository.StudentRepository;
 import project.TutorLab.repository.TutorRepository;
 import project.TutorLab.service.StudentService;
@@ -59,6 +60,11 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public List<StudentCardDto> getAllStudentsByTutorId(String tutorId) {
         List<Student> students = studentRepository.findByTutorId(tutorId);
+        Tutor tutor = tutorRepository.findById(tutorId);
+        List<String> favoriteIds = (tutor != null && tutor.getFavoriteStudentIds() != null) 
+            ? tutor.getFavoriteStudentIds() 
+            : new ArrayList<>();
+        
         List<StudentCardDto> cardDtos = new ArrayList<>();
         
         for (Student student : students) {
@@ -68,8 +74,18 @@ public class StudentServiceImpl implements StudentService {
             cardDto.setLastName(student.getLastName());
             cardDto.setAge(student.getAge());
             cardDto.setPhotoUrl(student.getPhotoUrl());
+            cardDto.setIsFavorite(favoriteIds.contains(student.getId()));
             cardDtos.add(cardDto);
         }
+        
+        // Сортируем: избранные сначала
+        cardDtos.sort((a, b) -> {
+            boolean aFavorite = Boolean.TRUE.equals(a.getIsFavorite());
+            boolean bFavorite = Boolean.TRUE.equals(b.getIsFavorite());
+            if (aFavorite && !bFavorite) return -1;
+            if (!aFavorite && bFavorite) return 1;
+            return 0;
+        });
         
         return cardDtos;
     }
@@ -104,6 +120,53 @@ public class StudentServiceImpl implements StudentService {
         studentRepository.save(student);
         
         return convertToResponseDto(student);
+    }
+
+    @Override
+    public void deleteStudent(String studentId) {
+        Student student = studentRepository.findById(studentId);
+        if (student == null) {
+            throw new IllegalArgumentException("Student with id " + studentId + " does not exist");
+        }
+        
+        String tutorId = student.getTutorId();
+        Tutor tutor = tutorRepository.findById(tutorId);
+        if (tutor != null && tutor.getFavoriteStudentIds() != null) {
+            tutor.getFavoriteStudentIds().remove(studentId);
+            tutorRepository.save(tutor);
+        }
+        
+        studentRepository.deleteById(studentId);
+    }
+
+    @Override
+    public void toggleFavoriteStudent(String tutorId, String studentId) {
+        Tutor tutor = tutorRepository.findById(tutorId);
+        if (tutor == null) {
+            throw new IllegalArgumentException("Tutor with id " + tutorId + " does not exist");
+        }
+        
+        Student student = studentRepository.findById(studentId);
+        if (student == null) {
+            throw new IllegalArgumentException("Student with id " + studentId + " does not exist");
+        }
+        
+        if (!student.getTutorId().equals(tutorId)) {
+            throw new IllegalArgumentException("Student does not belong to this tutor");
+        }
+        
+        if (tutor.getFavoriteStudentIds() == null) {
+            tutor.setFavoriteStudentIds(new ArrayList<>());
+        }
+        
+        List<String> favoriteIds = tutor.getFavoriteStudentIds();
+        if (favoriteIds.contains(studentId)) {
+            favoriteIds.remove(studentId);
+        } else {
+            favoriteIds.add(studentId);
+        }
+        
+        tutorRepository.save(tutor);
     }
 
     private StudentResponseDto convertToResponseDto(Student student) {

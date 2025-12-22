@@ -39,6 +39,26 @@ function Home({ tutorId }) {
     navigate(`/student/${studentId}`);
   };
 
+  const handleDeleteStudent = async (studentId) => {
+    try {
+      await studentApi.deleteStudent(studentId);
+      loadStudents();
+    } catch (err) {
+      console.error('Ошибка при удалении ученика:', err);
+      alert('Не удалось удалить ученика. Попробуйте снова.');
+    }
+  };
+
+  const handleToggleFavorite = async (studentId) => {
+    try {
+      await studentApi.toggleFavorite(studentId, tutorId);
+      loadStudents();
+    } catch (err) {
+      console.error('Ошибка при изменении избранного:', err);
+      alert('Не удалось изменить статус избранного. Попробуйте снова.');
+    }
+  };
+
   return (
     <div className="home-container">
       {/* Кнопка настроек в правом верхнем углу */}
@@ -77,6 +97,9 @@ function Home({ tutorId }) {
                 key={student.id}
                 student={student}
                 onClick={() => handleCardClick(student.id)}
+                onDelete={handleDeleteStudent}
+                onToggleFavorite={handleToggleFavorite}
+                tutorId={tutorId}
               />
             ))}
           </div>
