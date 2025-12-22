@@ -12,5 +12,7 @@ public interface StudentService {
     List<StudentCardDto> getAllStudentsByTutorId(String tutorId);
     StudentResponseDto addMaterial(String studentId, String materialUrl);
     StudentResponseDto addLessonDate(String studentId, String lessonDate);
+    void deleteStudent(String studentId);
+    void toggleFavoriteStudent(String tutorId, String studentId);
 }
 

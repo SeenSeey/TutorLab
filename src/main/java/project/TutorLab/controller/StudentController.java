@@ -78,5 +78,31 @@ public class StudentController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable String id) {
+        try {
+            studentService.deleteStudent(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{id}/toggle-favorite")
+    public ResponseEntity<Void> toggleFavoriteStudent(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String tutorId = request.get("tutorId");
+            if (tutorId == null || tutorId.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            studentService.toggleFavoriteStudent(tutorId, id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
 

@@ -4,8 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import project.TutorLab.dto.TutorLoginDto;
 import project.TutorLab.dto.TutorRegistrationDto;
 import project.TutorLab.dto.TutorResponseDto;
+import project.TutorLab.dto.TutorUpdateDto;
 import project.TutorLab.service.TutorService;
 
 @RestController
@@ -18,8 +20,22 @@ public class TutorController {
 
     @PostMapping("/register")
     public ResponseEntity<TutorResponseDto> registerTutor(@RequestBody TutorRegistrationDto registrationDto) {
-        TutorResponseDto response = tutorService.registerTutor(registrationDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            TutorResponseDto response = tutorService.registerTutor(registrationDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).build();
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<TutorResponseDto> loginTutor(@RequestBody TutorLoginDto loginDto) {
+        try {
+            TutorResponseDto response = tutorService.loginTutor(loginDto);
+            return ResponseEntity.ok(response);
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).build();
+        }
     }
 
     @GetMapping("/{id}")
@@ -31,9 +47,25 @@ public class TutorController {
         return ResponseEntity.ok(tutor);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TutorResponseDto> updateTutor(@PathVariable String id, @RequestBody TutorUpdateDto updateDto) {
+        try {
+            TutorResponseDto response = tutorService.updateTutor(id, updateDto);
+            return ResponseEntity.ok(response);
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).build();
+        }
+    }
+
     @GetMapping("/{id}/exists")
     public ResponseEntity<Boolean> tutorExists(@PathVariable String id) {
         boolean exists = tutorService.tutorExists(id);
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/login/{login}/exists")
+    public ResponseEntity<Boolean> loginExists(@PathVariable String login) {
+        boolean exists = tutorService.loginExists(login);
         return ResponseEntity.ok(exists);
     }
 }

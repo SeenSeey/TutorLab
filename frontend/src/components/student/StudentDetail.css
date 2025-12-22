@@ -1,76 +1,320 @@
 .student-detail-container {
   min-height: 100vh;
-  padding: 20px 0;
+  padding: 40px 0;
+}
+
+.student-detail-container .loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .back-btn {
-  background: none;
-  border: none;
-  color: #007bff;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text-primary);
   font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
-  margin-bottom: 20px;
-  padding: 5px 0;
+  margin-bottom: 24px;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
 }
 
 .back-btn:hover {
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--accent-cyan);
+  transform: translateX(-4px);
 }
 
-.student-detail-header {
+/* Основная карточка с информацией о студенте */
+.student-main-card {
+  margin-bottom: 30px;
+}
+
+.student-main-content {
   display: flex;
   gap: 30px;
-  margin-bottom: 30px;
-  align-items: center;
+  align-items: flex-start;
+}
+
+.student-photo-section {
+  flex-shrink: 0;
 }
 
 .student-photo {
-  width: 150px;
-  height: 150px;
-  border-radius: 8px;
+  width: 180px;
+  height: 180px;
+  aspect-ratio: 1;
+  border-radius: 20px;
   object-fit: cover;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .student-photo-placeholder {
-  width: 150px;
-  height: 150px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
+  width: 180px;
+  height: 180px;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 48px;
-  font-weight: bold;
+  color: var(--text-primary);
+  font-size: 64px;
+  font-weight: 700;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
-.student-info h1 {
-  margin: 0 0 10px 0;
-  color: #333;
+.student-info-section {
+  flex: 1;
+}
+
+.student-info-section h1 {
+  margin: 0 0 16px 0;
+  color: var(--text-primary);
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .student-age {
-  color: #666;
-  font-size: 18px;
-  margin: 0;
+  color: var(--text-secondary);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 24px 0;
+}
+
+.student-info-section .interests-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.student-info-section .interest-tag {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
 }
 
 .empty-text {
-  color: #999;
+  color: var(--text-muted);
   font-style: italic;
+  font-size: 15px;
 }
 
 .add-form {
   display: flex;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 12px;
+  margin-top: 20px;
+  align-items: center;
+}
+
+.add-form label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-form .btn-primary {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 120px;
+  white-space: nowrap;
 }
 
 .form-input {
   flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 12px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Стили для карточек */
+.student-detail-container .card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px var(--glass-shadow);
+}
+
+.student-detail-container .card h2 {
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.student-detail-container .calendar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.student-detail-container .calendar-date {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 12px;
   font-size: 14px;
+  font-weight: 500;
+}
+
+.student-detail-container .materials-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.student-detail-container .materials-list li {
+  padding: 12px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 10px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.student-detail-container .materials-list li:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--accent-cyan);
+  transform: translateX(4px);
+}
+
+.student-detail-container .materials-list a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.student-detail-container .materials-list a:hover {
+  text-decoration: underline;
+}
+
+.upcoming-lessons {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lesson-item {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lesson-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--accent-cyan);
+  transform: translateX(4px);
+}
+
+.lesson-item-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.lesson-date-label {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lesson-time-label {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lesson-item-note {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .student-main-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .student-info-section h1 {
+    font-size: 28px;
+  }
+
+  .student-photo,
+  .student-photo-placeholder {
+    width: 150px;
+    height: 150px;
+  }
 }
 

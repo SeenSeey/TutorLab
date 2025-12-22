@@ -23,6 +23,9 @@ public class FileUploadController {
 
     @Value("${app.upload.dir:users-photos}")
     private String uploadDir;
+    
+    @Value("${app.upload.materials.dir:materials}")
+    private String materialsDir;
 
     @PostMapping("/upload-photo")
     public ResponseEntity<Map<String, String>> uploadPhoto(@RequestParam("file") MultipartFile file) {
@@ -88,6 +91,163 @@ public class FileUploadController {
                     .body(imageBytes);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @RequestMapping(value = "/upload-material", method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/upload-material")
+    public ResponseEntity<Map<String, String>> uploadMaterial(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("tutorId") String tutorId,
+            @RequestParam("studentId") String studentId) {
+        Map<String, String> response = new HashMap<>();
+        
+        if (file.isEmpty()) {
+            response.put("error", "Файл не выбран");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        if (tutorId == null || tutorId.isEmpty() || studentId == null || studentId.isEmpty()) {
+            response.put("error", "Не указаны ID репетитора или студента");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Проверка размера файла (макс 10MB)
+        if (file.getSize() > 10 * 1024 * 1024) {
+            response.put("error", "Размер файла не должен превышать 10MB");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            // Создаем структуру папок: materials/{tutorId}/{studentId}/
+            Path tutorPath = Paths.get(materialsDir, tutorId);
+            Path studentPath = tutorPath.resolve(studentId);
+            
+            if (!Files.exists(studentPath)) {
+                Files.createDirectories(studentPath);
+            }
+
+            // Получаем оригинальное имя файла
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                originalFilename = "file_" + System.currentTimeMillis();
+            }
+
+            // Очищаем имя файла от недопустимых символов, но сохраняем русские буквы
+            // Разрешаем: буквы (латиница и кириллица), цифры, точки, дефисы, подчеркивания
+            String safeFilename = originalFilename.replaceAll("[^\\p{L}\\p{N}.\\-_]", "_");
+            
+            // Проверяем, существует ли файл с таким именем
+            Path filePath = studentPath.resolve(safeFilename);
+            if (Files.exists(filePath)) {
+                // Если файл существует, добавляем timestamp перед расширением
+                int lastDotIndex = safeFilename.lastIndexOf('.');
+                if (lastDotIndex > 0) {
+                    String nameWithoutExt = safeFilename.substring(0, lastDotIndex);
+                    String extension = safeFilename.substring(lastDotIndex);
+                    safeFilename = nameWithoutExt + "_" + System.currentTimeMillis() + extension;
+                } else {
+                    safeFilename = safeFilename + "_" + System.currentTimeMillis();
+                }
+                filePath = studentPath.resolve(safeFilename);
+            }
+
+            // Сохраняем файл
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Возвращаем относительный путь для использования в приложении
+            String fileUrl = "/api/students/materials/" + tutorId + "/" + studentId + "/" + safeFilename;
+            response.put("fileUrl", fileUrl);
+            response.put("fileName", safeFilename);
+            
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            response.put("error", "Ошибка при сохранении файла: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/materials/{tutorId}/{studentId}/{filename:.+}")
+    public ResponseEntity<byte[]> getMaterial(
+            @PathVariable String tutorId,
+            @PathVariable String studentId,
+            @PathVariable String filename) {
+        try {
+            // Безопасный путь: materials/{tutorId}/{studentId}/{filename}
+            Path filePath = Paths.get(materialsDir, tutorId, studentId, filename).normalize();
+            
+            // Проверяем, что путь находится в правильной директории (защита от path traversal)
+            Path basePath = Paths.get(materialsDir, tutorId, studentId).normalize();
+            if (!filePath.startsWith(basePath)) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            File file = filePath.toFile();
+            
+            if (!file.exists() || !file.isFile()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] fileBytes = Files.readAllBytes(filePath);
+            String contentType = Files.probeContentType(filePath);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", contentType != null ? contentType : "application/octet-stream")
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .body(fileBytes);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/tutors/upload-photo")
+    @CrossOrigin(origins = "*")
+    public ResponseEntity<Map<String, String>> uploadTutorPhoto(@RequestParam("file") MultipartFile file) {
+        Map<String, String> response = new HashMap<>();
+        
+        if (file.isEmpty()) {
+            response.put("error", "Файл не выбран");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Проверка типа файла
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            response.put("error", "Файл должен быть изображением");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            // Создаем директорию, если её нет
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Генерируем уникальное имя файла
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String filename = UUID.randomUUID().toString() + extension;
+
+            // Сохраняем файл
+            Path filePath = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Возвращаем относительный путь для использования в приложении
+            String photoUrl = "/api/students/photos/" + filename;
+            response.put("photoUrl", photoUrl);
+            
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            response.put("error", "Ошибка при сохранении файла: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }

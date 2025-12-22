@@ -16,6 +16,56 @@
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   box-shadow: 0 8px 32px var(--glass-shadow);
+  gap: 20px;
+  overflow: hidden;
+}
+
+.home-header .btn-primary {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+  padding: 10px 20px;
+  font-size: 14px;
+  margin-left: auto;
+  min-width: auto;
+  max-width: none;
+}
+
+.settings-button {
+  position: fixed;
+  top: 60px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  box-shadow: 0 8px 32px var(--glass-shadow);
+}
+
+.settings-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px) rotate(90deg);
+  box-shadow: 0 12px 40px rgba(0, 212, 255, 0.3);
+}
+
+.settings-button:active {
+  transform: translateY(0) rotate(90deg);
+}
+
+.settings-button svg {
+  width: 24px;
+  height: 24px;
 }
 
 .home-header h1 {
@@ -27,6 +77,10 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .loading {
@@ -76,3 +130,11 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
+
+.student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+  padding: 0;
+}
+
