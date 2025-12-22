@@ -11,8 +11,21 @@ const api = axios.create({
 
 export const tutorApi = {
   register: (data) => api.post('/tutors/register', data),
+  login: (data) => api.post('/tutors/login', data),
   getTutor: (id) => api.get(`/tutors/${id}`),
+  updateTutor: (id, data) => api.put(`/tutors/${id}`, data),
   tutorExists: (id) => api.get(`/tutors/${id}/exists`),
+  loginExists: (login) => api.get(`/tutors/login/${login}/exists`),
+  uploadPhoto: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`${API_BASE_URL}/students/tutors/upload-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
+  },
 };
 
 export const studentApi = {

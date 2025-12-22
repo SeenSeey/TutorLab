@@ -41,6 +41,19 @@ function Home({ tutorId }) {
 
   return (
     <div className="home-container">
+      {/* Кнопка настроек в правом верхнем углу */}
+      {tutorId && tutorId !== 'temp' && (
+        <button 
+          className="settings-button" 
+          onClick={() => navigate('/settings')}
+          title="Настройки"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-4.242 0L5.636 17.364m12.728 0l-4.243-4.243m-4.242 0L5.636 6.636"/>
+          </svg>
+        </button>
+      )}
       <div className="container">
         <div className="home-header">
           <h1>Мои ученики</h1>
