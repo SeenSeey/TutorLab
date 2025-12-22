@@ -1,4 +1,4 @@
-package project.TutorLab.dto;
+package project.TutorLab.dto.live;
 
 public class PointerEvent {
     private String sessionId;

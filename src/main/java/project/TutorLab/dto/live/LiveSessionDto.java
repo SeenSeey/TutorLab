@@ -1,4 +1,4 @@
-package project.TutorLab.dto;
+package project.TutorLab.dto.live;
 
 import java.util.List;
 

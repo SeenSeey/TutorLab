@@ -1,4 +1,102 @@
 package project.TutorLab.service.impl;
 
-public class LiveSessionServiceImpl {
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import project.TutorLab.model.live.LiveSessionState;
+import project.TutorLab.service.LiveSessionService;
+
+import java.time.Duration;
+import java.util.*;
+
+@Service
+public class LiveSessionServiceImpl implements LiveSessionService {
+
+    private static final String KEY_PREFIX = "live:session:";
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Override
+    public LiveSessionState createSession(String tutorId, String title) {
+        String id = UUID.randomUUID().toString();
+        LiveSessionState state = new LiveSessionState();
+        state.setSessionId(id);
+        state.setTutorId(tutorId);
+        state.setTitle(title != null ? title : "Новый урок");
+        state.setCurrentSlideIndex(0);
+        state.setSlideUrls(new ArrayList<>());
+        state.setSlideDrawings(new HashMap<>());
+
+        saveSession(state);
+        return state;
+    }
+
+    @Override
+    public LiveSessionState getSession(String sessionId) {
+        String key = KEY_PREFIX + sessionId;
+        Object obj = redisTemplate.opsForValue().get(key);
+        return obj instanceof LiveSessionState ? (LiveSessionState) obj : null;
+    }
+
+    @Override
+    public void updateSlide(String sessionId, int slideIndex) {
+        LiveSessionState state = getSession(sessionId);
+        if (state == null) return;
+        state.setCurrentSlideIndex(slideIndex);
+        saveSession(state);
+    }
+
+    @Override
+    public void addSlides(String sessionId, List<String> slideUrls) {
+        LiveSessionState state = getSession(sessionId);
+        if (state == null) return;
+        state.setSlideUrls(slideUrls);
+        state.setCurrentSlideIndex(0);
+        saveSession(state);
+    }
+
+    @Override
+    public void updateSession(LiveSessionState session) {
+        if (session != null) {
+            saveSession(session);
+        }
+    }
+
+    @Override
+    public void addDrawPath(String sessionId, int slideIndex, LiveSessionState.DrawPath path) {
+        LiveSessionState state = getSession(sessionId);
+        if (state == null) return;
+
+        state.getSlideDrawings()
+                .computeIfAbsent(slideIndex, k -> new ArrayList<>())
+                .add(path);
+
+        saveSession(state);
+    }
+
+    @Override
+    public void addDrawPoint(String sessionId, int slideIndex, String pathId, double x, double y) {
+
+    }
+
+    @Override
+    public void clearSlideDrawings(String sessionId, int slideIndex) {
+        LiveSessionState state = getSession(sessionId);
+        if (state == null) return;
+
+        state.getSlideDrawings().remove(slideIndex);
+        saveSession(state);
+    }
+
+    @Override
+    public void deleteSession(String sessionId) {
+        String key = KEY_PREFIX + sessionId;
+        redisTemplate.delete(key);
+    }
+
+    private void saveSession(LiveSessionState state) {
+        String key = KEY_PREFIX + state.getSessionId();
+        redisTemplate.opsForValue().set(key, state, Duration.ofHours(6));
+    }
 }
