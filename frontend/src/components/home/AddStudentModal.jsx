@@ -77,10 +77,10 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
         setError('');
       }
     } else {
-      setFormData({
-        ...formData,
-        [e.target.name]: e.target.value,
-      });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
     }
   };
 
@@ -149,40 +149,40 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
         </div>
         <div className="modal-body-wrapper">
           <form onSubmit={handleSubmit} className="modal-form">
-            <div className="form-group">
+          <div className="form-group">
               <label htmlFor="fullName">Имя и Фамилия *</label>
-              <input
-                type="text"
+            <input
+              type="text"
                 id="fullName"
                 name="fullName"
                 value={formData.fullName}
-                onChange={handleChange}
+              onChange={handleChange}
                 placeholder="Иван Иванов"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="age">Возраст *</label>
-              <input
-                type="number"
-                id="age"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                min="1"
-                max="100"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="age">Возраст *</label>
+            <input
+              type="number"
+              id="age"
+              name="age"
+              value={formData.age}
+              onChange={handleChange}
+              min="1"
+              max="100"
                 placeholder="12"
-                required
-              />
-            </div>
-            <div className="form-group">
+              required
+            />
+          </div>
+          <div className="form-group">
               <label htmlFor="photo">Фотография</label>
-              <input
+            <input
                 type="file"
                 id="photo"
                 name="photo"
                 accept="image/*"
-                onChange={handleChange}
+              onChange={handleChange}
                 style={{ display: 'none' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -238,8 +238,8 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
                   </div>
                 )}
               </div>
-            </div>
-            <div className="form-group">
+          </div>
+          <div className="form-group">
               <button
                 type="button"
                 className="interests-toggle-btn"
@@ -266,17 +266,17 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
                   ))}
                 </div>
               )}
-            </div>
-            {error && <div className="error-message">{error}</div>}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Отмена
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Создание...' : 'Создать'}
-              </button>
-            </div>
-          </form>
+          </div>
+          {error && <div className="error-message">{error}</div>}
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Отмена
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Создание...' : 'Создать'}
+            </button>
+          </div>
+        </form>
           
           {showInterests && (
             <div className="interests-panel">

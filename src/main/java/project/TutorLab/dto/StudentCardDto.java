@@ -6,6 +6,7 @@ public class StudentCardDto {
     private String lastName;
     private Integer age;
     private String photoUrl;
+    private Boolean isFavorite;
 
     public StudentCardDto() {
     }
@@ -56,6 +57,14 @@ public class StudentCardDto {
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public Boolean getIsFavorite() {
+        return isFavorite;
+    }
+
+    public void setIsFavorite(Boolean isFavorite) {
+        this.isFavorite = isFavorite;
     }
 }
 

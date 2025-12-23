@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { tutorApi } from '../../services/api';
-import './Registration.css';
+import './Login.css';
 
-function Registration({ onRegister }) {
+function Login({ onLogin }) {
   const [formData, setFormData] = useState({
-    fullName: '',
     login: '',
     password: '',
   });
@@ -24,13 +23,13 @@ function Registration({ onRegister }) {
     setLoading(true);
 
     try {
-      const response = await tutorApi.register(formData);
-      onRegister(response.data.id);
+      const response = await tutorApi.login(formData);
+      onLogin(response.data.id);
     } catch (err) {
-      if (err.response && err.response.status === 409) {
-        setError('Пользователь с таким логином уже существует');
+      if (err.response && err.response.status === 401) {
+        setError('Неверный логин или пароль');
       } else {
-        setError('Ошибка при регистрации. Попробуйте еще раз.');
+        setError('Ошибка при входе. Попробуйте еще раз.');
       }
       console.error(err);
     } finally {
@@ -39,21 +38,10 @@ function Registration({ onRegister }) {
   };
 
   return (
-    <div className="registration-container">
-      <div className="registration-card">
-        <h1>Регистрация репетитора</h1>
+    <div className="login-container">
+      <div className="login-card">
+        <h1>Вход в аккаунт</h1>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="fullName">ФИО</label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              required
-            />
-          </div>
           <div className="form-group">
             <label htmlFor="login">Логин</label>
             <input
@@ -78,7 +66,7 @@ function Registration({ onRegister }) {
           </div>
           {error && <div className="error-message">{error}</div>}
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+            {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
       </div>
@@ -86,5 +74,5 @@ function Registration({ onRegister }) {
   );
 }
 
-export default Registration;
+export default Login;
 

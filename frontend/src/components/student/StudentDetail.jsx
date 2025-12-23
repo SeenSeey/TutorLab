@@ -187,24 +187,24 @@ function StudentDetail({ tutorId }) {
             <div className="student-photo-section">
               {photoUrl ? (
                 <img src={photoUrl} alt={`${student.firstName} ${student.lastName}`} className="student-photo" />
-              ) : (
-                <div className="student-photo-placeholder">
-                  <span>{student.firstName.charAt(0)}{student.lastName.charAt(0)}</span>
-                </div>
-              )}
+          ) : (
+            <div className="student-photo-placeholder">
+              <span>{student.firstName.charAt(0)}{student.lastName.charAt(0)}</span>
+            </div>
+          )}
             </div>
             <div className="student-info-section">
-              <h1>{student.firstName} {student.lastName}</h1>
-              <p className="student-age">Возраст: {student.age} лет</p>
-              {student.interests && student.interests.length > 0 ? (
-                <div className="interests-list">
-                  {student.interests.map((interest, index) => (
-                    <span key={index} className="interest-tag">{interest}</span>
-                  ))}
-                </div>
-              ) : (
-                <p className="empty-text">Интересы не указаны</p>
-              )}
+            <h1>{student.firstName} {student.lastName}</h1>
+            <p className="student-age">Возраст: {student.age} лет</p>
+          {student.interests && student.interests.length > 0 ? (
+            <div className="interests-list">
+              {student.interests.map((interest, index) => (
+                <span key={index} className="interest-tag">{interest}</span>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-text">Интересы не указаны</p>
+          )}
             </div>
           </div>
         </div>
@@ -301,7 +301,7 @@ function StudentDetail({ tutorId }) {
 
         <div className="card">
           <h2>Материалы</h2>
-              {student.materialUrls && student.materialUrls.length > 0 ? (
+          {student.materialUrls && student.materialUrls.length > 0 ? (
             <ul className="materials-list">
               {student.materialUrls.map((url, index) => {
                 const displayUrl = url.startsWith('/api/') 
@@ -311,11 +311,11 @@ function StudentDetail({ tutorId }) {
                 const fileName = url.split('/').pop() || `Материал ${index + 1}`;
                 
                 return (
-                  <li key={index}>
+                <li key={index}>
                     <a href={displayUrl} target="_blank" rel="noopener noreferrer" download>
                       📄 {decodeURIComponent(fileName)}
                     </a>
-                  </li>
+                </li>
                 );
               })}
             </ul>
@@ -334,6 +334,7 @@ function StudentDetail({ tutorId }) {
               htmlFor="materialFile"
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: '12px 20px',
                 background: 'var(--glass-bg)',
                 backdropFilter: 'blur(10px)',
@@ -348,6 +349,9 @@ function StudentDetail({ tutorId }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 e.target.style.background = 'rgba(255, 255, 255, 0.25)';
