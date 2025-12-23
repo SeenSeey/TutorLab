@@ -349,59 +349,29 @@ function LiveLessonTeacher({ tutorId }) {
     <div className="live-lesson-container">
       {/* Шапка */}
       <div className="live-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h2>🎥 Живой урок (преподаватель)</h2>
-            <p style={{ margin: '5px 0', opacity: 0.8, fontSize: '14px' }}>
-              ID: <code>{session?.sessionId}</code>
-            </p>
-          </div>
+        <div className="live-header-content">
           <button
             onClick={() => navigate('/home')}
-            className="btn btn-secondary"
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
+            className="back-button"
           >
             ← Назад
           </button>
+          <h1 className="live-header-title">🎥 Живой урок</h1>
         </div>
-
         {session && (
-          <div style={{
-            marginTop: '15px',
-            padding: '15px',
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.25)'
-          }}>
-            <p style={{ margin: '0 0 10px 0', fontWeight: '600', color: 'white' }}>
+          <div className="student-link-container">
+            <p className="student-link-label">
               📋 Ссылка для учеников:
             </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="student-link-wrapper">
               <input
                 type="text"
                 readOnly
                 value={`${window.location.origin}/live/student/${session.sessionId}`}
                 onClick={(e) => e.target.select()}
-                style={{
-                  flex: 1,
-                  padding: '12px 15px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  background: 'rgba(255,255,255,0.95)',
-                  color: '#333',
-                  fontSize: '14px',
-                  fontFamily: 'monospace'
-                }}
+                className="student-link-input"
               />
-              <button onClick={handleCopyLink} className="btn btn-primary">
+              <button onClick={handleCopyLink} className="copy-link-button">
                 📋 Копировать
               </button>
             </div>
@@ -411,17 +381,6 @@ function LiveLessonTeacher({ tutorId }) {
 
       {/* Панель инструментов */}
       <div className="live-controls">
-        <input
-          type="file"
-          accept="application/pdf"
-          onChange={handleFileUpload}
-          style={{ display: 'none' }}
-          id="pdf-upload"
-        />
-        <label htmlFor="pdf-upload" className="btn btn-primary" style={{ cursor: 'pointer' }}>
-          {loading ? '⏳ Загрузка...' : '📤 Загрузить PDF'}
-        </label>
-
         {presentation && (
           <>
             <div className="slide-controls">
@@ -473,38 +432,43 @@ function LiveLessonTeacher({ tutorId }) {
           </>
         )}
 
-        <button
-          onClick={toggleAudio}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: 'none',
-            background: isAudioEnabled ? '#4CAF50' : '#757575',
-            color: 'white',
-            cursor: 'pointer',
-            fontWeight: '600',
-            transition: 'all 0.3s'
-          }}
-        >
-          {isAudioEnabled ? '🎤 Микрофон вкл' : '🎤 Микрофон'}
-        </button>
+        <div className="media-controls">
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            id="pdf-upload"
+          />
+          <label htmlFor="pdf-upload" className="pdf-upload-label">
+            {loading ? '⏳ Загрузка...' : '📤 Загрузить PDF'}
+          </label>
 
-        {isAudioEnabled && (
           <button
-            onClick={toggleMute}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: isMuted ? '#f44336' : '#2196F3',
-              color: 'white',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
+            onClick={toggleAudio}
+            className={`microphone-button ${isAudioEnabled ? 'active' : ''}`}
           >
-            {isMuted ? '🔇' : '🔊'}
+            {isAudioEnabled ? '🎤 Микрофон вкл' : '🎤 Микрофон'}
           </button>
-        )}
+
+          {isAudioEnabled && (
+            <button
+              onClick={toggleMute}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: isMuted ? '#f44336' : '#2196F3',
+                color: 'white',
+                cursor: 'pointer',
+                fontWeight: '600',
+                transition: 'all 0.3s'
+              }}
+            >
+              {isMuted ? '🔇' : '🔊'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Презентация с canvas */}
