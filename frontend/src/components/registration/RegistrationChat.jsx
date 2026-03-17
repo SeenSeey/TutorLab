@@ -38,12 +38,12 @@ function RegistrationChat({ onRegister }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const addSystemMessage = (text) => {
+  const addSystemMessage = (text, fast = false) => {
     setIsTyping(true);
     setTimeout(() => {
       setMessages((prev) => [...prev, { type: 'system', text, timestamp: Date.now() }]);
       setIsTyping(false);
-    }, 1000);
+    }, fast ? 350 : 1000);
   };
 
   useEffect(() => {
@@ -76,18 +76,17 @@ function RegistrationChat({ onRegister }) {
       password: '',
       confirmPassword: '',
     });
-    
-    // Добавляем сообщение о выборе
+
     const modeText = selectedMode === 'register' ? 'Зарегистрироваться' : 'Войти';
     addUserMessage(modeText);
-    
-    // Добавляем первый вопрос выбранного режима
+
+    const isLogin = selectedMode === 'login';
     setTimeout(() => {
-      const firstQuestion = selectedMode === 'register' 
-        ? registrationSteps[0].question 
+      const firstQuestion = selectedMode === 'register'
+        ? registrationSteps[0].question
         : loginSteps[0].question;
-      addSystemMessage(firstQuestion);
-    }, 800);
+      addSystemMessage(firstQuestion, isLogin);
+    }, isLogin ? 400 : 800);
   };
 
   const handleInputChange = (e) => {
@@ -123,14 +122,13 @@ function RegistrationChat({ onRegister }) {
     addUserMessage(value, steps[currentStep].isPassword);
 
     if (currentStep < steps.length - 1) {
-      // Переход к следующему вопросу
+      const isLogin = mode === 'login';
       setTimeout(() => {
         setCurrentStep(currentStep + 1);
-        addSystemMessage(steps[currentStep + 1].question);
-        // Сбрасываем состояние показа пароля при переходе
+        addSystemMessage(steps[currentStep + 1].question, isLogin);
         setShowPassword(false);
         setShowConfirmPassword(false);
-      }, 800);
+      }, isLogin ? 400 : 800);
     } else {
       // Все данные собраны
       setLoading(true);
@@ -144,7 +142,7 @@ function RegistrationChat({ onRegister }) {
           });
           addSystemMessage('Отлично! Регистрация завершена. Добро пожаловать! 🎉');
           setTimeout(() => {
-            onRegister(response.data.id);
+            onRegister(response.data);
           }, 1500);
         } else {
           // Вход
@@ -154,18 +152,21 @@ function RegistrationChat({ onRegister }) {
           });
           addSystemMessage('Отлично! Вход выполнен. Добро пожаловать! 🎉');
           setTimeout(() => {
-            onRegister(response.data.id);
+            onRegister(response.data);
           }, 1500);
         }
       } catch (err) {
-        if (mode === 'login' && err.response && err.response.status === 401) {
+        const isLogin = mode === 'login';
+        if (isLogin && err.response && err.response.status === 401) {
           setError('Неверный логин или пароль');
-          addSystemMessage('Неверный логин или пароль. Попробуйте ещё раз.');
+          addSystemMessage('Неверный логин или пароль. Попробуйте ещё раз.', true);
         } else {
           setError(mode === 'register' ? 'Ошибка при регистрации. Попробуйте ещё раз.' : 'Ошибка при входе. Попробуйте ещё раз.');
-          addSystemMessage('К сожалению, произошла ошибка. Давайте попробуем ещё раз.');
+          addSystemMessage('К сожалению, произошла ошибка. Давайте попробуем ещё раз.', isLogin);
         }
-        console.error(err);
+        // Reset to first step so user can retry
+        setCurrentStep(0);
+        setFormData({ fullName: '', login: '', password: '', confirmPassword: '' });
         setLoading(false);
       }
     }

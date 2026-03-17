@@ -1,12 +1,13 @@
 // src/services/wsClient.js
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
-
-let stompClient = null;
-let subscriptions = {};
+import { WS_URL } from '../config.js';
 
 export const connectToSession = (sessionId, callbacks = {}) => {
-  const socket = new SockJS('http://localhost:8080/ws');
+  let stompClient = null;
+  let subscriptions = {};
+
+  const socket = new SockJS(`${WS_URL}/ws`);
   stompClient = Stomp.over(socket);
 
   stompClient.debug = () => {}; // Отключить логи

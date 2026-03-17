@@ -1,42 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import axios from 'axios';
+import { API_BASE } from './config.js';
 import RegistrationChat from './components/registration/RegistrationChat';
-import Login from './components/login/Login';
 import Home from './components/home/Home';
 import Settings from './components/settings/Settings';
 import StudentDetail from './components/student/StudentDetail';
 import LiveLessonTeacher from './components/live/LiveLessonTeacher';
 import LiveLessonStudent from './components/live/LiveLessonStudent';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import './App.css';
 
 function AppContent() {
   const [tutorId, setTutorId] = useState(localStorage.getItem('tutorId'));
-  const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (tutorId) {
-      localStorage.setItem('tutorId', tutorId);
-    } else {
-      localStorage.removeItem('tutorId');
+  const handleAuth = (data) => {
+    const id = typeof data === 'string' ? data : data.id;
+    const accessToken = typeof data === 'object' ? (data.sessionToken || data.accessToken) : null;
+    const refreshToken = typeof data === 'object' ? data.refreshToken : null;
+
+    setTutorId(id);
+    localStorage.setItem('tutorId', id);
+    if (accessToken) localStorage.setItem('sessionToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  };
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await axios.post(`${API_BASE}/api/auth/logout`, { refreshToken });
+      } catch {
+        // Ignore logout errors — clear local state regardless
+      }
     }
-  }, [tutorId]);
-
-  const handleRegister = (id) => {
-    setTutorId(id);
-    localStorage.setItem('tutorId', id);
-    setShowLogin(false);
-  };
-
-  const handleLogin = (id) => {
-    setTutorId(id);
-    localStorage.setItem('tutorId', id);
-    setShowLogin(false);
-  };
-
-  const handleLogout = () => {
     setTutorId(null);
     localStorage.removeItem('tutorId');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('refreshToken');
   };
 
   return (
@@ -47,36 +50,9 @@ function AppContent() {
           element={
             <>
               {tutorId ? (
-                <Home tutorId={tutorId} />
+                <Home tutorId={tutorId} onLogout={handleLogout} />
               ) : (
-                <>
-                  <div className="home-background">
-                    <Home tutorId="temp" />
-                  </div>
-                  {showLogin ? (
-                    <Login onLogin={handleLogin} />
-                  ) : (
-                    <>
-                      <RegistrationChat onRegister={handleRegister} />
-                      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                        <button
-                          onClick={() => setShowLogin(true)}
-                          style={{
-                            background: 'transparent',
-                            border: '2px solid white',
-                            color: 'white',
-                            padding: '10px 20px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                          }}
-                        >
-                          Уже есть аккаунт? Войти
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </>
+                <RegistrationChat onRegister={handleAuth} />
               )}
             </>
           }
@@ -116,7 +92,10 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <Toaster position="top-right" />
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </Router>
   );
 }

@@ -1,7 +1,13 @@
 package project.TutorLab.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class TutorLoginDto {
+
+    @NotBlank
     private String login;
+
+    @NotBlank
     private String password;
 
     public TutorLoginDto() {
@@ -28,4 +34,3 @@ public class TutorLoginDto {
         this.password = password;
     }
 }
-

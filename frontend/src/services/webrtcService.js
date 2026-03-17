@@ -1,89 +1,129 @@
 import Peer from 'simple-peer';
 
 export class WebRTCService {
-  constructor(wsClient, sessionId, isInitiator) {
+  constructor(wsClient, sessionId, isInitiator, role = 'teacher') {
     this.wsClient = wsClient;
     this.sessionId = sessionId;
     this.isInitiator = isInitiator;
+    this.role = role; // 'teacher' | 'student'
     this.peer = null;
     this.localStream = null;
-    this.remoteAudio = null;
+    this.remoteStream = null;
+    this.onRemoteStream = null;
+    this.lastError = null; // 'permission' | 'in-use' | 'unavailable' | 'peer'
   }
 
-  async startAudioStream() {
+  _createPeer(stream) {
+    const opts = {
+      initiator: this.isInitiator,
+      trickle: false,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+      },
+    };
+    if (stream) opts.stream = stream;
+
+    this.peer = new Peer(opts);
+
+    this.peer.on('signal', (data) => {
+      this.wsClient.sendWebRTC({ type: 'signal', signal: data, role: this.role });
+    });
+
+    this.peer.on('stream', (remoteStream) => {
+      this.remoteStream = remoteStream;
+      this.onRemoteStream?.(remoteStream);
+    });
+
+    this.peer.on('error', (err) => {
+      console.error('WebRTC peer error:', err);
+    });
+  }
+
+  // Receive-only (non-initiator without local media)
+  connect() {
+    if (!this.peer) this._createPeer(null);
+  }
+
+  async startStream({ audio = true, video = false } = {}) {
+    this.lastError = null;
+
+    // Step 1: get media access
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: false
+        audio: audio
+          ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          : false,
+        video: video
+          ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+          : false,
       });
-
-      this.peer = new Peer({
-        initiator: this.isInitiator,
-        stream: this.localStream,
-        trickle: false,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        }
-      });
-
-      this.peer.on('signal', (data) => {
-        this.wsClient.sendWebRTC({
-          type: 'signal',
-          signal: data
-        });
-      });
-
-      this.peer.on('stream', (remoteStream) => {
-        if (!this.remoteAudio) {
-          this.remoteAudio = new Audio();
-          this.remoteAudio.srcObject = remoteStream;
-          this.remoteAudio.play();
-        }
-      });
-
-      this.peer.on('error', (err) => {
-        console.error('WebRTC error:', err);
-      });
-
-      return true;
     } catch (err) {
-      console.error('Failed to get audio stream:', err);
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        this.lastError = 'permission';
+      } else if (name === 'NotReadableError' || name === 'AbortError') {
+        this.lastError = 'in-use';
+      } else {
+        this.lastError = 'unavailable';
+      }
+      console.error('getUserMedia failed:', name, err.message);
       return false;
     }
+
+    // Step 2: create WebRTC peer (separate from media access)
+    try {
+      this._createPeer(this.localStream);
+    } catch (err) {
+      console.error('Peer creation failed:', err);
+      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream = null;
+      this.lastError = 'peer';
+      return false;
+    }
+
+    return true;
+  }
+
+  // Back-compat
+  async startAudioStream() {
+    return this.startStream({ audio: true, video: false });
   }
 
   handleSignal(signal) {
-    if (this.peer) {
-      this.peer.signal(signal);
-    }
+    if (!this.peer) this.connect();
+    this.peer.signal(signal);
+  }
+
+  stopStream() {
+    this.localStream?.getTracks().forEach((t) => t.stop());
+    this.peer?.destroy();
+    this.localStream = null;
+    this.peer = null;
+    this.remoteStream = null;
   }
 
   stopAudioStream() {
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
-    }
-    if (this.peer) {
-      this.peer.destroy();
-    }
-    if (this.remoteAudio) {
-      this.remoteAudio.pause();
-      this.remoteAudio = null;
-    }
+    this.stopStream();
   }
 
   toggleMute() {
-    if (this.localStream) {
-      const audioTrack = this.localStream.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
-      return audioTrack.enabled;
-    }
-    return false;
+    const t = this.localStream?.getAudioTracks()[0];
+    if (!t) return false;
+    t.enabled = !t.enabled;
+    return t.enabled;
+  }
+
+  toggleVideo() {
+    const t = this.localStream?.getVideoTracks()[0];
+    if (!t) return false;
+    t.enabled = !t.enabled;
+    return t.enabled;
+  }
+
+  getLocalStream() {
+    return this.localStream;
   }
 }

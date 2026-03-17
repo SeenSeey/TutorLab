@@ -1,24 +1,53 @@
 // src/components/live/LiveLessonStudent.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { connectToSession } from '../../services/wsClient';
-import Peer from 'simple-peer';
+import { WebRTCService } from '../../services/webrtcService';
 import api from '../../services/api';
+import toast from 'react-hot-toast';
+import { API_BASE } from '../../config.js';
+import {
+  IconMic, IconCamera, IconMuteOff, IconMuteOn,
+} from './liveIcons.jsx';
 import './LiveLesson.css';
+
+const CANVAS_W = 1200;
+const CANVAS_H = 675;
+
+function mediaErrorMessage(rtc, type) {
+  if (rtc.lastError === 'permission') return `Разрешите доступ к ${type} в настройках браузера`;
+  if (rtc.lastError === 'in-use') return `${type === 'камере' ? 'Камера' : 'Микрофон'} используется другим приложением`;
+  if (rtc.lastError === 'peer') return 'Ошибка WebRTC. Попробуйте ещё раз';
+  return `Нет доступа к ${type}`;
+}
 
 function LiveLessonStudent() {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [session, setSession] = useState(null);
+  const [sessionError, setSessionError] = useState(null);
   const [presentation, setPresentation] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [audioConnected, setAudioConnected] = useState(false);
-  const [pointerPos, setPointerPos] = useState(null);
+  const [teacherMediaConnected, setTeacherMediaConnected] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [pointerFraction, setPointerFraction] = useState(null);
 
-  const peerRef = useRef(null);
-  const remoteAudioRef = useRef(null);
+  const teacherRtcRef = useRef(null);
+  const studentRtcRef = useRef(null);
+  const teacherVideoRef = useRef(null);
+  const localVideoRef = useRef(null);
   const clientRef = useRef(null);
   const canvasRef = useRef(null);
   const pointerTimeoutRef = useRef(null);
+
+  // ── Assign local stream to video element after it mounts ──────────────
+  useEffect(() => {
+    if (isVideoEnabled && localVideoRef.current && studentRtcRef.current) {
+      localVideoRef.current.srcObject = studentRtcRef.current.getLocalStream();
+    }
+  }, [isVideoEnabled]);
 
   useEffect(() => {
     const load = async () => {
@@ -26,102 +55,79 @@ function LiveLessonStudent() {
         const res = await api.get(`/live/sessions/${sessionId}`);
         setSession(res.data);
 
-        // Загрузить презентацию если есть
         try {
           const presRes = await api.get(`/live/sessions/${sessionId}/presentation`);
           setPresentation(presRes.data);
           setCurrentSlide(presRes.data.currentSlide || 0);
-        } catch (err) {
-          console.log('Презентация ещё не загружена');
+        } catch {
+          // No presentation yet
         }
 
         const wsClient = connectToSession(sessionId, {
           onWebRTC: handleWebRTCSignal,
-          onSlideChange: (data) => {
-            setCurrentSlide(data.slideIndex);
-          },
+          onSlideChange: (data) => setCurrentSlide(data.slideIndex),
           onPresentationUpdate: (data) => {
-            console.log('📊 Презентация получена:', data);
             setPresentation({ slides: data.slides });
             setCurrentSlide(0);
           },
-          onDraw: (data) => {
-            drawOnCanvas(data);
-          },
+          onDraw: (data) => drawOnCanvas(data),
           onPointer: (data) => {
-            setPointerPos({ x: data.x, y: data.y });
-
-            // Скрыть указатель через 2 секунды
-            if (pointerTimeoutRef.current) {
-              clearTimeout(pointerTimeoutRef.current);
-            }
-            pointerTimeoutRef.current = setTimeout(() => {
-              setPointerPos(null);
-            }, 2000);
+            setPointerFraction({ x: data.x / CANVAS_W, y: data.y / CANVAS_H });
+            if (pointerTimeoutRef.current) clearTimeout(pointerTimeoutRef.current);
+            pointerTimeoutRef.current = setTimeout(() => setPointerFraction(null), 2000);
           },
           onClear: () => {
             if (canvasRef.current) {
               const ctx = canvasRef.current.getContext('2d');
               ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+              ctx.currentPaths = {};
             }
           },
         });
         clientRef.current = wsClient;
       } catch (err) {
-        console.error('Ошибка загрузки сессии:', err);
+        const status = err?.response?.status;
+        if (status === 404) {
+          setSessionError('Урок не найден. Проверьте ссылку или попросите преподавателя отправить новую.');
+        } else {
+          setSessionError('Не удалось подключиться к уроку. Проверьте соединение и обновите страницу.');
+        }
       }
     };
 
     load();
-
     return () => {
-      if (clientRef.current) clientRef.current.disconnect();
-      if (peerRef.current) peerRef.current.destroy();
+      clientRef.current?.disconnect();
+      teacherRtcRef.current?.stopStream();
+      studentRtcRef.current?.stopStream();
       if (pointerTimeoutRef.current) clearTimeout(pointerTimeoutRef.current);
     };
   }, [sessionId]);
 
-  // ✅ ЗАГРУЗКА РИСУНКОВ ПРИ СМЕНЕ СЛАЙДА
+  // ── Load drawings on slide change (also fires when presentation mounts) ─
   useEffect(() => {
-    if (canvasRef.current && sessionId) {
-      loadSlideDrawings(currentSlide);
-    }
-  }, [currentSlide, sessionId]);
+    if (canvasRef.current && sessionId && presentation) loadSlideDrawings(currentSlide);
+  }, [currentSlide, sessionId, presentation]);
 
-  // ✅ ФУНКЦИЯ ЗАГРУЗКИ РИСУНКОВ
   const loadSlideDrawings = async (slideIndex) => {
     if (!sessionId || !canvasRef.current) return;
-
     try {
       const res = await api.get(`/live/sessions/${sessionId}/slides/${slideIndex}/drawings`);
-      const drawings = res.data;
-
-      // Очистить canvas
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       ctx.currentPaths = {};
-
-      // Отрисовать сохраненные пути
-      drawings.forEach(path => {
+      res.data.forEach((path) => {
+        if (!path.points?.length) return;
         ctx.strokeStyle = path.color;
         ctx.lineWidth = path.width;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-
-        if (path.points && path.points.length > 0) {
-          ctx.moveTo(path.points[0].x, path.points[0].y);
-          for (let i = 1; i < path.points.length; i++) {
-            ctx.lineTo(path.points[i].x, path.points[i].y);
-          }
-          ctx.stroke();
-        }
+        ctx.moveTo(path.points[0].x, path.points[0].y);
+        for (let i = 1; i < path.points.length; i++) ctx.lineTo(path.points[i].x, path.points[i].y);
+        ctx.stroke();
       });
-
-      console.log(`✅ Загружено ${drawings.length} рисунков для слайда ${slideIndex}`);
-    } catch (err) {
-      console.log('Нет сохраненных рисунков для этого слайда');
-      // Очистить canvas если нет рисунков
+    } catch {
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -130,77 +136,108 @@ function LiveLessonStudent() {
     }
   };
 
+  // ── WebRTC: handle incoming signals ──────────────────────────────────
   const handleWebRTCSignal = (data) => {
-    if (data.type === 'signal') {
-      if (!peerRef.current && clientRef.current) {
-        peerRef.current = new Peer({
-          initiator: false,
-          trickle: false,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-          }
-        });
+    if (data.type !== 'signal') return;
 
-        peerRef.current.on('signal', (signal) => {
-          clientRef.current.sendWebRTC({ type: 'signal', signal });
-        });
-
-        peerRef.current.on('stream', (remoteStream) => {
-          if (!remoteAudioRef.current) {
-            remoteAudioRef.current = new Audio();
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().then(() => {
-              setAudioConnected(true);
-              console.log('✅ Аудио подключено');
-            }).catch(err => {
-              console.error('❌ Ошибка воспроизведения аудио:', err);
-            });
-          }
-        });
-
-        peerRef.current.on('error', (err) => {
-          console.error('❌ WebRTC error:', err);
-        });
+    if (!data.role || data.role === 'teacher') {
+      if (!teacherRtcRef.current && clientRef.current) {
+        const rtc = new WebRTCService(clientRef.current, sessionId, false, 'student');
+        rtc.onRemoteStream = (stream) => {
+          if (teacherVideoRef.current) teacherVideoRef.current.srcObject = stream;
+          setTeacherMediaConnected(true);
+        };
+        rtc.connect();
+        teacherRtcRef.current = rtc;
       }
-
-      if (peerRef.current) {
-        peerRef.current.signal(data.signal);
-      }
+      teacherRtcRef.current?.handleSignal(data.signal);
     }
   };
 
+  // ── Student mic ───────────────────────────────────────────────────────
+  const toggleStudentAudio = async () => {
+    if (!isAudioEnabled) {
+      if (!clientRef.current) return;
+      const rtc = new WebRTCService(clientRef.current, sessionId, true, 'student');
+      rtc.onRemoteStream = () => {};
+      const ok = await rtc.startStream({ audio: true, video: false });
+      if (ok) {
+        studentRtcRef.current = rtc;
+        setIsAudioEnabled(true);
+      } else {
+        toast.error(mediaErrorMessage(rtc, 'микрофону'));
+      }
+    } else {
+      studentRtcRef.current?.stopStream();
+      studentRtcRef.current = null;
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      setIsAudioEnabled(false);
+      setIsVideoEnabled(false);
+      setIsMuted(false);
+    }
+  };
+
+  // ── Student camera ────────────────────────────────────────────────────
+  const toggleStudentCamera = async () => {
+    if (!studentRtcRef.current) {
+      if (!clientRef.current) return;
+      const rtc = new WebRTCService(clientRef.current, sessionId, true, 'student');
+      rtc.onRemoteStream = () => {};
+      const ok = await rtc.startStream({ audio: true, video: true });
+      if (ok) {
+        studentRtcRef.current = rtc;
+        setIsAudioEnabled(true);
+        setIsVideoEnabled(true);
+        // srcObject assigned via useEffect once video element mounts
+      } else {
+        toast.error(mediaErrorMessage(rtc, 'камере'));
+      }
+    } else {
+      const enabled = studentRtcRef.current.toggleVideo();
+      setIsVideoEnabled(enabled);
+      if (!enabled && localVideoRef.current) localVideoRef.current.srcObject = null;
+    }
+  };
+
+  const toggleMute = () => {
+    if (studentRtcRef.current) {
+      const enabled = studentRtcRef.current.toggleMute();
+      setIsMuted(!enabled);
+    }
+  };
+
+  const handleLeaveLesson = () => {
+    clientRef.current?.disconnect();
+    teacherRtcRef.current?.stopStream();
+    studentRtcRef.current?.stopStream();
+    navigate('/');
+  };
+
+  // ── Draw (incoming from teacher) ──────────────────────────────────────
   const drawOnCanvas = (data) => {
     if (!canvasRef.current) return;
-
     const ctx = canvasRef.current.getContext('2d');
-
     if (data.end) {
-      if (ctx.currentPaths) {
-        delete ctx.currentPaths[data.pathId];
-      }
+      if (ctx.currentPaths) delete ctx.currentPaths[data.pathId];
+      ctx.globalCompositeOperation = 'source-over';
       return;
     }
-
     if (!data.pathId) return;
-
-    // Initialize currentPaths if needed
     if (!ctx.currentPaths) ctx.currentPaths = {};
 
+    const isEraser = data.color === 'eraser';
     if (!ctx.currentPaths[data.pathId]) {
-      // NEW PATH - set all properties fresh
       ctx.currentPaths[data.pathId] = true;
-      ctx.strokeStyle = data.color;
-      ctx.lineWidth = data.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.beginPath();  // ✅ Critical: start new path
+      ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      if (!isEraser) ctx.strokeStyle = data.color;
+      ctx.lineWidth = data.width;
+      ctx.beginPath();
       ctx.moveTo(data.x, data.y);
     } else {
-      // CONTINUE EXISTING PATH
-      ctx.strokeStyle = data.color;  // ✅ Reapply style properties
+      ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      if (!isEraser) ctx.strokeStyle = data.color;
       ctx.lineWidth = data.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -209,89 +246,146 @@ function LiveLessonStudent() {
     }
   };
 
+  // ── Error state ───────────────────────────────────────────────────────
+  if (sessionError) {
+    return (
+      <div className="live-lesson-container" role="main">
+        <div className="live-header">
+          <div className="live-header-content">
+            <h1 className="live-header-title">Живой урок</h1>
+            <button onClick={() => navigate('/')} className="end-lesson-button">
+              На главную
+            </button>
+          </div>
+        </div>
+        <div className="no-presentation" style={{ marginTop: '60px' }}>
+          <div className="no-presentation-icon">⚠️</div>
+          <p>{sessionError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="live-lesson-container">
+    <div className="live-lesson-container" role="main" aria-label="Живой урок — ученик">
+
+      {/* Header — same structure as teacher */}
       <div className="live-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <h2>🎥 Живой урок (ученик)</h2>
-          {audioConnected && (
-            <span style={{
-              color: '#4CAF50',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '8px 16px',
-              background: 'rgba(76, 175, 80, 0.2)',
-              borderRadius: '8px',
-              border: '1px solid rgba(76, 175, 80, 0.3)'
-            }}>
-              🔊 Аудио подключено
+        <div className="live-header-content">
+          <h1 className="live-header-title">Живой урок</h1>
+
+          {teacherMediaConnected && (
+            <span className="ws-status connected" role="status">
+              <span className="ws-dot" />
+              Преподаватель подключён
             </span>
+          )}
+
+          <button onClick={handleLeaveLesson} className="end-lesson-button" aria-label="Покинуть урок">
+            Покинуть урок
+          </button>
+        </div>
+      </div>
+
+      {/* Controls — same structure as teacher, media-only */}
+      <div className="live-controls" role="toolbar" aria-label="Управление медиа">
+        <div className="media-controls">
+          <button
+            onClick={toggleStudentAudio}
+            className={`microphone-button ${isAudioEnabled ? 'active' : ''}`}
+            aria-pressed={isAudioEnabled}
+            aria-label={isAudioEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
+            title={isAudioEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
+          >
+            <IconMic />
+            {isAudioEnabled ? 'Микр. вкл' : 'Микрофон'}
+          </button>
+
+          <button
+            onClick={toggleStudentCamera}
+            className={`camera-button ${isVideoEnabled ? 'active' : ''}`}
+            aria-pressed={isVideoEnabled}
+            aria-label={isVideoEnabled ? 'Выключить камеру' : 'Включить камеру'}
+            title={isVideoEnabled ? 'Выключить камеру' : 'Включить камеру'}
+          >
+            <IconCamera />
+            {isVideoEnabled ? 'Кам. вкл' : 'Камера'}
+          </button>
+
+          {isAudioEnabled && (
+            <button
+              onClick={toggleMute}
+              className={`mute-button ${isMuted ? 'muted' : ''}`}
+              aria-pressed={isMuted}
+              aria-label={isMuted ? 'Включить звук' : 'Заглушить'}
+              title={isMuted ? 'Включить звук' : 'Заглушить'}
+            >
+              {isMuted ? <IconMuteOff /> : <IconMuteOn />}
+            </button>
           )}
         </div>
       </div>
 
+      {/* Video strip — same structure as teacher */}
+      {(teacherMediaConnected || isVideoEnabled) && (
+        <div className="video-strip">
+          {teacherMediaConnected && (
+            <div className="video-bubble">
+              <video ref={teacherVideoRef} autoPlay playsInline className="video-el" />
+              <span className="video-bubble-label">Преподаватель</span>
+            </div>
+          )}
+          {isVideoEnabled && (
+            <div className="video-bubble">
+              <video ref={localVideoRef} autoPlay muted playsInline className="video-el" />
+              <span className="video-bubble-label">Вы</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Canvas */}
       {presentation ? (
-        <div className="canvas-container" style={{ position: 'relative' }}>
+        <div
+          className="canvas-container"
+          aria-label={`Слайд ${currentSlide + 1} из ${presentation.slides.length}`}
+        >
           <img
-            src={`http://localhost:8080${presentation.slides[currentSlide]}`}
-            alt={`Slide ${currentSlide + 1}`}
+            src={`${API_BASE}${presentation.slides[currentSlide]}`}
+            alt={`Слайд ${currentSlide + 1}`}
             className="slide-background"
+            draggable="false"
           />
           <canvas
             ref={canvasRef}
-            width={1200}
-            height={675}
+            width={CANVAS_W}
+            height={CANVAS_H}
             className="drawing-canvas"
+            aria-hidden="true"
           />
 
-          {/* Указатель преподавателя */}
-          {pointerPos && (
+          {pointerFraction && (
             <div
+              className="pointer-overlay"
+              aria-hidden="true"
               style={{
-                position: 'absolute',
-                left: `${pointerPos.x}px`,
-                top: `${pointerPos.y}px`,
-                fontSize: '48px',
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-                zIndex: 1000,
-                transition: 'left 0.1s, top 0.1s',
-                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
+                left: `${pointerFraction.x * 100}%`,
+                top: `${pointerFraction.y * 100}%`,
               }}
             >
               👆
             </div>
           )}
 
-          <div style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            zIndex: 100
-          }}>
+          <div className="slide-counter" aria-live="polite" aria-atomic="true">
             {currentSlide + 1} / {presentation.slides.length}
           </div>
         </div>
       ) : (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px',
-          background: 'var(--glass-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--glass-border)',
-          color: 'white'
-        }}>
-          <p style={{ fontSize: '20px', margin: 0 }}>
-            ⏳ Ожидание презентации от преподавателя...
-          </p>
+        <div className="no-presentation">
+          <div className="no-presentation-icon">⏳</div>
+          <p>Ожидание презентации от преподавателя...</p>
         </div>
       )}
     </div>

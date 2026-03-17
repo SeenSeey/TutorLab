@@ -1,9 +1,15 @@
 package project.TutorLab.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import project.TutorLab.config.JwtService;
 import project.TutorLab.dto.TutorLoginDto;
 import project.TutorLab.dto.TutorRegistrationDto;
 import project.TutorLab.dto.TutorResponseDto;
@@ -14,32 +20,47 @@ import project.TutorLab.service.TutorService;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TutorServiceImpl implements TutorService {
 
+    private static final Logger log = LoggerFactory.getLogger(TutorServiceImpl.class);
+
     @Autowired
     private TutorRepository tutorRepository;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Value("${app.jwt.refresh-ttl-days:30}")
+    private long refreshTtlDays;
+
     @Override
     public TutorResponseDto registerTutor(TutorRegistrationDto registrationDto) {
-        // Проверяем, существует ли пользователь с таким логином
         if (tutorRepository.existsByLogin(registrationDto.getLogin())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Пользователь с таким логином уже существует");
         }
-        
+
         String tutorId = UUID.randomUUID().toString();
-        
+
         Tutor tutor = new Tutor();
         tutor.setId(tutorId);
         tutor.setFullName(registrationDto.getFullName());
         tutor.setLogin(registrationDto.getLogin());
-        tutor.setPassword(registrationDto.getPassword());
+        tutor.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
         tutor.setStudentIds(new ArrayList<>());
-        
+
         tutorRepository.save(tutor);
-        
-        return convertToResponseDto(tutor);
+        log.info("Registered new tutor: login={}, id={}", registrationDto.getLogin(), tutorId);
+
+        return buildLoginResponse(tutor);
     }
 
     @Override
@@ -48,10 +69,12 @@ public class TutorServiceImpl implements TutorService {
         if (tutor == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный логин или пароль");
         }
-        if (!tutor.getPassword().equals(loginDto.getPassword())) {
+        if (!passwordEncoder.matches(loginDto.getPassword(), tutor.getPassword())) {
+            log.warn("Failed login attempt for login={}", loginDto.getLogin());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный логин или пароль");
         }
-        return convertToResponseDto(tutor);
+        log.info("Tutor logged in: login={}, id={}", loginDto.getLogin(), tutor.getId());
+        return buildLoginResponse(tutor);
     }
 
     @Override
@@ -60,7 +83,7 @@ public class TutorServiceImpl implements TutorService {
         if (tutor == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Репетитор не найден");
         }
-        
+
         if (updateDto.getFullName() != null) {
             tutor.setFullName(updateDto.getFullName());
         }
@@ -70,7 +93,7 @@ public class TutorServiceImpl implements TutorService {
         if (updateDto.getAbout() != null) {
             tutor.setAbout(updateDto.getAbout());
         }
-        
+
         tutorRepository.save(tutor);
         return convertToResponseDto(tutor);
     }
@@ -104,5 +127,18 @@ public class TutorServiceImpl implements TutorService {
         dto.setStudentIds(tutor.getStudentIds());
         return dto;
     }
-}
 
+    private TutorResponseDto buildLoginResponse(Tutor tutor) {
+        // Short-lived JWT access token
+        String accessToken = jwtService.generateAccessToken(tutor.getId());
+
+        // Long-lived refresh token (opaque UUID, stored in Redis)
+        String refreshToken = UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set("refresh:" + refreshToken, tutor.getId(), refreshTtlDays, TimeUnit.DAYS);
+
+        TutorResponseDto dto = convertToResponseDto(tutor);
+        dto.setSessionToken(accessToken);   // kept for frontend backward compatibility
+        dto.setRefreshToken(refreshToken);
+        return dto;
+    }
+}

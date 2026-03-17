@@ -1,5 +1,7 @@
 package project.TutorLab.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -27,17 +29,22 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class LiveSessionController {
 
-    @Autowired
-    private LiveSessionService liveSessionService;
+    private static final Logger log = LoggerFactory.getLogger(LiveSessionController.class);
 
-    @Autowired
-    private LiveSessionWsController wsController;
+    private final LiveSessionService liveSessionService;
 
-    @Autowired
-    private PdfService pdfService;
+    private final LiveSessionWsController wsController;
+
+    private final PdfService pdfService;
 
     @Value("${app.upload.dir:users-photos}")
     private String uploadDir;
+
+    public LiveSessionController(LiveSessionService liveSessionService, LiveSessionWsController wsController, PdfService pdfService) {
+        this.liveSessionService = liveSessionService;
+        this.wsController = wsController;
+        this.pdfService = pdfService;
+    }
 
     @PostMapping("/sessions")
     public ResponseEntity<LiveSessionState> createSession(
@@ -56,14 +63,13 @@ public class LiveSessionController {
     }
 
     @PostMapping("/sessions/{sessionId}/presentation")
-    public ResponseEntity<Map<String, Object>> uploadPresentation(
+    public ResponseEntity<Void> uploadPresentation(
             @PathVariable String sessionId,
             @RequestParam("file") MultipartFile file) throws IOException {
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.equals("application/pdf")) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Only PDF files are allowed"));
+            return ResponseEntity.badRequest().build();
         }
 
         LiveSessionState session = liveSessionService.getSession(sessionId);
@@ -71,21 +77,19 @@ public class LiveSessionController {
             return ResponseEntity.notFound().build();
         }
 
-        // Конвертация PDF в изображения
-        List<String> slideUrls = pdfService.convertPdfToImages(file, sessionId);
+        byte[] pdfBytes = file.getBytes();
 
-        // Обновить сессию
-        session.setSlideUrls(slideUrls);
-        session.setCurrentSlideIndex(0);
-        liveSessionService.updateSession(session);
+        pdfService.convertPdfToImagesAsync(pdfBytes, sessionId).thenAccept(slideUrls -> {
+            LiveSessionState s = liveSessionService.getSession(sessionId);
+            if (s != null) {
+                s.setSlideUrls(slideUrls);
+                s.setCurrentSlideIndex(0);
+                liveSessionService.updateSession(s);
+            }
+            wsController.notifyPresentationLoaded(sessionId, slideUrls);
+        });
 
-        // Отправить WebSocket сообщение всем подписчикам
-        wsController.notifyPresentationLoaded(sessionId, slideUrls);
-
-        return ResponseEntity.ok(Map.of(
-                "slides", slideUrls,
-                "slideCount", slideUrls.size()
-        ));
+        return ResponseEntity.accepted().build();
     }
 
     @GetMapping("/sessions/{sessionId}/presentation")
@@ -128,16 +132,28 @@ public class LiveSessionController {
 
 
     @GetMapping("/slides/{sessionId}/{filename:.+}")
-    @SuppressWarnings("null")
     public ResponseEntity<Resource> getSlide(
             @PathVariable String sessionId,
             @PathVariable String filename
     ) {
-        try {
-            Path filePath = Paths.get(uploadDir, "slides", sessionId, filename).normalize();
-            java.net.URI uri = filePath.toUri();
-            Resource resource = new UrlResource(uri);
+        // Path traversal protection: reject any path component containing ".." or "/"
+        if (sessionId.contains("..") || sessionId.contains("/") || sessionId.contains("\\")
+                || filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            log.warn("Path traversal attempt detected: sessionId={}, filename={}", sessionId, filename);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
+        try {
+            Path basePath = Paths.get(uploadDir, "slides").toAbsolutePath().normalize();
+            Path filePath = basePath.resolve(sessionId).resolve(filename).normalize();
+
+            // Verify the resolved path is strictly inside the slides base directory
+            if (!filePath.startsWith(basePath)) {
+                log.warn("Resolved path escaped base dir: {}", filePath);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
                 return ResponseEntity.notFound().build();
             }
@@ -152,6 +168,7 @@ public class LiveSessionController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
                     .body(resource);
         } catch (Exception e) {
+            log.error("Error serving slide: sessionId={}, filename={}", sessionId, filename, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

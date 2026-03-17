@@ -2,6 +2,7 @@ package project.TutorLab.repository.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 import project.TutorLab.model.Student;
@@ -17,7 +18,9 @@ public class StudentRepositoryImpl implements StudentRepository {
 
     private static final String STUDENT_KEY_PREFIX = "student:";
     private static final String TUTOR_STUDENTS_KEY_PREFIX = "tutor:students:";
-    private static final long TTL_DAYS = 30;
+
+    @Value("${app.student.ttl-days:30}")
+    private long ttlDays;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -28,11 +31,11 @@ public class StudentRepositoryImpl implements StudentRepository {
     @Override
     public Student save(Student student) {
         String key = STUDENT_KEY_PREFIX + student.getId();
-        redisTemplate.opsForValue().set(key, student, TTL_DAYS, TimeUnit.DAYS);
+        redisTemplate.opsForValue().set(key, student, ttlDays, TimeUnit.DAYS);
         
         String tutorStudentsKey = TUTOR_STUDENTS_KEY_PREFIX + student.getTutorId();
         redisTemplate.opsForSet().add(tutorStudentsKey, student.getId());
-        redisTemplate.expire(tutorStudentsKey, TTL_DAYS, TimeUnit.DAYS);
+        redisTemplate.expire(tutorStudentsKey, ttlDays, TimeUnit.DAYS);
         
         return student;
     }

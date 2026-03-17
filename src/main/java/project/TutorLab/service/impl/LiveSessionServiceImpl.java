@@ -1,6 +1,7 @@
 package project.TutorLab.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import project.TutorLab.model.live.LiveSessionState;
@@ -16,6 +17,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Value("${app.live-session.ttl-hours:6}")
+    private long sessionTtlHours;
 
     @Override
     public LiveSessionState createSession(String tutorId, String title) {
@@ -79,11 +83,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    public void addDrawPoint(String sessionId, int slideIndex, String pathId, double x, double y) {
-
-    }
-
-    @Override
     public void clearSlideDrawings(String sessionId, int slideIndex) {
         LiveSessionState state = getSession(sessionId);
         if (state == null)
@@ -102,7 +101,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @SuppressWarnings("null")
     private void saveSession(LiveSessionState state) {
         String key = KEY_PREFIX + state.getSessionId();
-        Duration duration = Duration.ofHours(6);
+        Duration duration = Duration.ofHours(sessionTtlHours);
         redisTemplate.opsForValue().set(key, state, duration);
     }
 }

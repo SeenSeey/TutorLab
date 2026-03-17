@@ -1,5 +1,8 @@
 package project.TutorLab.controller;
 
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +24,24 @@ import java.util.UUID;
 @CrossOrigin(origins = "*")
 public class FileUploadController {
 
+    private static final Logger log = LoggerFactory.getLogger(FileUploadController.class);
+
     @Value("${app.upload.dir:users-photos}")
     private String uploadDir;
-    
+
     @Value("${app.upload.materials.dir:materials}")
     private String materialsDir;
+
+    @PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+            Files.createDirectories(Paths.get(materialsDir));
+            log.info("Upload directories ready: {}, {}", uploadDir, materialsDir);
+        } catch (IOException e) {
+            log.error("Failed to create upload directories: {}", e.getMessage());
+        }
+    }
 
     @PostMapping("/upload-photo")
     public ResponseEntity<Map<String, String>> uploadPhoto(@RequestParam("file") MultipartFile file) {

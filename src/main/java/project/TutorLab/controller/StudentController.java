@@ -17,8 +17,11 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class StudentController {
 
-    @Autowired
-    private StudentService studentService;
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
 
     @PostMapping("/tutor/{tutorId}")
     public ResponseEntity<StudentResponseDto> createStudent(

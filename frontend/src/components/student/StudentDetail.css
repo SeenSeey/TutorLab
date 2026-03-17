@@ -1,6 +1,147 @@
+/* ── Detail page navigation ──────────────────────────────────────────── */
+.detail-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.detail-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.detail-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.detail-nav-brand .brand-logo-mark {
+  width: 34px;
+  height: 34px;
+  background: var(--accent-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+.detail-nav-brand .brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.detail-nav-breadcrumb {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.detail-nav-parent {
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.detail-nav-parent:hover {
+  color: var(--text-primary);
+}
+
+.detail-nav-sep {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.detail-nav-current {
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* File upload label — replaces inline hover handlers */
+.file-upload-label {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload-label:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--accent-cyan);
+}
+
+@media (max-width: 768px) {
+  .detail-nav-inner {
+    padding: 0 16px;
+  }
+  .detail-nav-brand .brand-name {
+    display: none;
+  }
+  .detail-nav-parent,
+  .detail-nav-sep {
+    display: none;
+  }
+}
+
 .student-detail-container {
   min-height: 100vh;
-  padding: 40px 0;
+  padding: 24px 0;
 }
 
 .student-detail-container .loading {
@@ -260,7 +401,9 @@
   border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 16px;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   transition: all 0.3s ease;
 }
 
@@ -268,6 +411,17 @@
   background: rgba(255, 255, 255, 0.2);
   border-color: var(--accent-cyan);
   transform: translateX(4px);
+}
+
+.lesson-item-main {
+  flex: 1;
+  cursor: pointer;
+}
+
+.lesson-start-btn {
+  flex-shrink: 0;
+  font-size: 13px;
+  padding: 6px 14px;
 }
 
 .lesson-item-date {

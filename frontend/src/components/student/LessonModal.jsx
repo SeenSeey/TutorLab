@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './LessonModal.css';
 
-function LessonModal({ date, lesson, onSave, onClose, onDelete }) {
+function LessonModal({ date, lesson, onSave, onClose }) {
   const [time, setTime] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -43,12 +43,6 @@ function LessonModal({ date, lesson, onSave, onClose, onDelete }) {
     });
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Вы уверены, что хотите удалить этот урок?')) {
-      onDelete(date);
-    }
-  };
-
   return (
     <div className="lesson-modal-overlay" onClick={onClose}>
       <div className="lesson-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -85,15 +79,6 @@ function LessonModal({ date, lesson, onSave, onClose, onDelete }) {
           {error && <div className="error-message">{error}</div>}
           
           <div className="lesson-modal-actions">
-            {lesson && (
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={handleDelete}
-              >
-                Удалить урок
-              </button>
-            )}
             <div className="action-buttons">
               <button
                 type="button"

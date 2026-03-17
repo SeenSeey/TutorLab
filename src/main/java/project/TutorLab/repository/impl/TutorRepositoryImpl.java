@@ -2,6 +2,7 @@ package project.TutorLab.repository.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 import project.TutorLab.model.Tutor;
@@ -14,7 +15,9 @@ public class TutorRepositoryImpl implements TutorRepository {
 
     private static final String TUTOR_KEY_PREFIX = "tutor:";
     private static final String TUTOR_LOGIN_INDEX_PREFIX = "tutor:login:";
-    private static final long TTL_DAYS = 30;
+
+    @Value("${app.tutor.ttl-days:30}")
+    private long ttlDays;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -35,12 +38,12 @@ public class TutorRepositoryImpl implements TutorRepository {
         }
         
         String key = TUTOR_KEY_PREFIX + tutor.getId();
-        redisTemplate.opsForValue().set(key, tutor, TTL_DAYS, TimeUnit.DAYS);
+        redisTemplate.opsForValue().set(key, tutor, ttlDays, TimeUnit.DAYS);
         
         // Создаем/обновляем индекс для поиска по логину
         if (tutor.getLogin() != null && !tutor.getLogin().isEmpty()) {
             String loginIndexKey = TUTOR_LOGIN_INDEX_PREFIX + tutor.getLogin();
-            redisTemplate.opsForValue().set(loginIndexKey, tutor.getId(), TTL_DAYS, TimeUnit.DAYS);
+            redisTemplate.opsForValue().set(loginIndexKey, tutor.getId(), ttlDays, TimeUnit.DAYS);
         }
         
         return tutor;

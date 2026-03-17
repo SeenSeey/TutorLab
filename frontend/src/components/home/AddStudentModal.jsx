@@ -124,9 +124,8 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
 
       await studentApi.createStudent(tutorId, studentData);
       onStudentAdded();
-    } catch (err) {
-      setError('Ошибка при создании ученика. Попробуйте еще раз.');
-      console.error(err);
+    } catch {
+      setError('Ошибка при создании ученика. Попробуйте ещё раз.');
     } finally {
       setLoading(false);
     }
@@ -186,54 +185,23 @@ function AddStudentModal({ tutorId, onClose, onStudentAdded }) {
                 style={{ display: 'none' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label
-                  htmlFor="photo"
-                  style={{
-                    padding: '12px 20px',
-                    background: 'var(--glass-bg)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    color: 'var(--text-primary)',
-                    fontWeight: '500',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.25)';
-                    e.target.style.borderColor = 'var(--accent-cyan)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'var(--glass-bg)';
-                    e.target.style.borderColor = 'var(--glass-border)';
-                  }}
-                >
+                <label htmlFor="photo" className="file-upload-label">
                   {formData.photo ? 'Изменить фотографию' : 'Выбрать фотографию'}
                 </label>
                 {photoPreview && (
                   <div style={{
-                    width: '100%',
-                    aspectRatio: '1',
-                    borderRadius: '12px',
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '1px solid var(--glass-border)',
+                    border: '2px solid var(--glass-border)',
                     background: 'var(--glass-bg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
+                    alignSelf: 'center',
                   }}>
                     <img
                       src={photoPreview}
                       alt="Preview"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                   </div>
                 )}

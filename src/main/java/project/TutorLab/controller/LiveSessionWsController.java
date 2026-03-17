@@ -1,10 +1,13 @@
 package project.TutorLab.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import project.TutorLab.dto.live.DrawEvent;
 import project.TutorLab.dto.live.PointerEvent;
@@ -15,17 +18,24 @@ import project.TutorLab.service.LiveSessionService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 public class LiveSessionWsController {
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private static final Logger log = LoggerFactory.getLogger(LiveSessionWsController.class);
 
-    @Autowired
-    private LiveSessionService liveSessionService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    private Map<String, LiveSessionState.DrawPath> activePaths = new HashMap<>();
+    private final LiveSessionService liveSessionService;
+
+    private final ConcurrentHashMap<String, LiveSessionState.DrawPath> activePaths = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> pathTimestamps = new ConcurrentHashMap<>();
+
+    public LiveSessionWsController(SimpMessagingTemplate messagingTemplate, LiveSessionService liveSessionService) {
+        this.messagingTemplate = messagingTemplate;
+        this.liveSessionService = liveSessionService;
+    }
 
     @MessageMapping("/session/{sessionId}/slide")
     public void changeSlide(@DestinationVariable String sessionId,
@@ -56,8 +66,10 @@ public class LiveSessionWsController {
                 activePaths.put(pathId, path);
             }
             path.getPoints().add(new LiveSessionState.Point(event.getX(), event.getY()));
+            pathTimestamps.put(pathId, System.currentTimeMillis());
         } else {
             LiveSessionState.DrawPath path = activePaths.remove(pathId);
+            pathTimestamps.remove(pathId);
             if (path != null) {
                 liveSessionService.addDrawPath(sessionId, slideIndex, path);
             }
@@ -108,7 +120,7 @@ public class LiveSessionWsController {
     // Уведомление о загрузке презентации (вызывается из REST контроллера)
     @SuppressWarnings("null")
     public void notifyPresentationLoaded(String sessionId, List<String> slideUrls) {
-        System.out.println("📢 Отправка презентации в WebSocket для сессии: " + sessionId);
+        log.info("Notifying presentation loaded for session={}, slides={}", sessionId, slideUrls.size());
         Map<String, Object> presentationMessage = new HashMap<>();
         presentationMessage.put("slides", slideUrls);
         presentationMessage.put("slideCount", slideUrls.size());
@@ -116,5 +128,17 @@ public class LiveSessionWsController {
                 "/topic/session." + sessionId + ".presentation",
                 presentationMessage
         );
+    }
+
+    @Scheduled(fixedDelay = 300_000)
+    public void cleanStalePaths() {
+        long cutoff = System.currentTimeMillis() - 600_000;
+        pathTimestamps.entrySet().removeIf(entry -> {
+            if (entry.getValue() < cutoff) {
+                activePaths.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 }

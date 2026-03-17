@@ -15,8 +15,11 @@ import project.TutorLab.service.TutorService;
 @CrossOrigin(origins = "*")
 public class TutorController {
 
-    @Autowired
-    private TutorService tutorService;
+    private final TutorService tutorService;
+
+    public TutorController(TutorService tutorService) {
+        this.tutorService = tutorService;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<TutorResponseDto> registerTutor(@RequestBody TutorRegistrationDto registrationDto) {

@@ -13,8 +13,11 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class HomeController {
 
-    @Autowired
-    private StudentService studentService;
+    private final StudentService studentService;
+
+    public HomeController(StudentService studentService) {
+        this.studentService = studentService;
+    }
 
     @GetMapping("/tutor/{tutorId}/students")
     public ResponseEntity<List<StudentCardDto>> getStudentCards(@PathVariable String tutorId) {

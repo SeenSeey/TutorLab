@@ -1,128 +1,158 @@
 // src/components/live/LiveLessonTeacher.jsx
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectToSession } from '../../services/wsClient';
 import { WebRTCService } from '../../services/webrtcService';
 import api from '../../services/api';
+import toast from 'react-hot-toast';
+import { API_BASE } from '../../config.js';
+import {
+  IconPen, IconEraser, IconPointer, IconTrash,
+  IconUpload, IconMic, IconCamera, IconMuteOff, IconMuteOn, IconLink,
+} from './liveIcons.jsx';
 import './LiveLesson.css';
+
+function mediaErrorMessage(rtc, type) {
+  if (rtc.lastError === 'permission') return `Разрешите доступ к ${type} в настройках браузера`;
+  if (rtc.lastError === 'in-use') return `${type === 'камере' ? 'Камера' : 'Микрофон'} используется другим приложением`;
+  if (rtc.lastError === 'peer') return 'Ошибка WebRTC. Попробуйте ещё раз';
+  return `Нет доступа к ${type}`;
+}
 
 function LiveLessonTeacher({ tutorId }) {
   const navigate = useNavigate();
-  const [session, setSession] = useState(null);
-  const [client, setClient] = useState(null);
+  const [searchParams] = useSearchParams();
+  const studentName = searchParams.get('studentName');
 
-  // Презентация
+  const [session, setSession] = useState(null);
   const [presentation, setPresentation] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Инструменты рисования
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#ff0000');
   const [lineWidth, setLineWidth] = useState(3);
 
-  // Аудио
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [studentConnected, setStudentConnected] = useState(false);
 
-  // Refs
   const webrtcRef = useRef(null);
+  const studentRtcRef = useRef(null);
+  const localVideoRef = useRef(null);
+  const studentVideoRef = useRef(null);
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const clientRef = useRef(null);
   const isDrawingRef = useRef(false);
   const pathIdRef = useRef(null);
 
-  useEffect(() => {
-    const create = async () => {
-      try {
-        const res = await api.post('/live/sessions', null, {
-          params: { tutorId, title: 'Урок' },
-        });
-        setSession(res.data);
+  // Keep latest values inside event listeners without stale closures
+  const toolRef = useRef(tool);
+  const colorRef = useRef(color);
+  const lineWidthRef = useRef(lineWidth);
+  const presentationRef = useRef(presentation);
+  const currentSlideRef = useRef(currentSlide);
 
-        // Попытка загрузить существующую презентацию
-        try {
-          const presRes = await api.get(`/live/sessions/${res.data.sessionId}/presentation`);
-          setPresentation(presRes.data);
-          setCurrentSlide(presRes.data.currentSlide || 0);
-        } catch (err) {
-          console.log('Презентация ещё не загружена');
+  useEffect(() => { toolRef.current = tool; }, [tool]);
+  useEffect(() => { colorRef.current = color; }, [color]);
+  useEffect(() => { lineWidthRef.current = lineWidth; }, [lineWidth]);
+  useEffect(() => { presentationRef.current = presentation; }, [presentation]);
+  useEffect(() => { currentSlideRef.current = currentSlide; }, [currentSlide]);
+
+  // ── Assign local stream to video element after it mounts ──────────────
+  useEffect(() => {
+    if (isVideoEnabled && localVideoRef.current && webrtcRef.current) {
+      localVideoRef.current.srcObject = webrtcRef.current.getLocalStream();
+    }
+  }, [isVideoEnabled]);
+
+  // ── Session init (with restore on page refresh) ───────────────────────
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const savedId = sessionStorage.getItem('liveSessionId');
+        let sessionData = null;
+
+        if (savedId) {
+          try {
+            const res = await api.get(`/live/sessions/${savedId}`);
+            if (res.data.tutorId === tutorId) sessionData = res.data;
+            else sessionStorage.removeItem('liveSessionId');
+          } catch {
+            sessionStorage.removeItem('liveSessionId');
+          }
         }
 
-        const wsClient = connectToSession(res.data.sessionId, {
-          onConnect: () => console.log('✅ WebSocket connected'),
+        if (!sessionData) {
+          const res = await api.post('/live/sessions', null, {
+            params: { tutorId, title: 'Урок' },
+          });
+          sessionData = res.data;
+          sessionStorage.setItem('liveSessionId', sessionData.sessionId);
+        }
+
+        setSession(sessionData);
+
+        try {
+          const presRes = await api.get(`/live/sessions/${sessionData.sessionId}/presentation`);
+          setPresentation(presRes.data);
+          setCurrentSlide(presRes.data.currentSlide || 0);
+        } catch {
+          // No presentation yet
+        }
+
+        const wsClient = connectToSession(sessionData.sessionId, {
+          onConnect: () => setWsConnected(true),
           onWebRTC: handleWebRTCSignal,
-          onSlideChange: (data) => {
-            setCurrentSlide(data.slideIndex);
-          },
+          onSlideChange: (data) => setCurrentSlide(data.slideIndex),
           onPresentationUpdate: (data) => {
-            console.log('📊 Презентация обновлена:', data);
             setPresentation({ slides: data.slides });
             setCurrentSlide(0);
           },
-          onDraw: (data) => {
-            drawOnCanvas(data);
-          },
-          onClear: () => {
-            clearCanvas();
-          },
+          onDraw: (data) => drawOnCanvas(data),
+          onClear: () => clearCanvas(),
         });
-        setClient(wsClient);
         clientRef.current = wsClient;
-      } catch (err) {
-        console.error('Ошибка создания сессии:', err);
+      } catch {
+        toast.error('Ошибка создания сессии');
       }
     };
 
-    create();
-
+    init();
     return () => {
-      if (clientRef.current) clientRef.current.disconnect();
-      if (webrtcRef.current) webrtcRef.current.stopAudioStream();
+      clientRef.current?.disconnect();
+      webrtcRef.current?.stopStream();
+      studentRtcRef.current?.stopStream();
     };
   }, [tutorId]);
 
-  // ✅ ЗАГРУЗКА РИСУНКОВ ПРИ СМЕНЕ СЛАЙДА
+  // ── Load drawings on slide change (also fires when presentation mounts) ─
   useEffect(() => {
-    if (canvasRef.current && session) {
-      loadSlideDrawings(currentSlide);
-    }
-  }, [currentSlide, session]);
+    if (canvasRef.current && session && presentation) loadSlideDrawings(currentSlide);
+  }, [currentSlide, session, presentation]);
 
-  // ✅ ФУНКЦИЯ ЗАГРУЗКИ РИСУНКОВ
   const loadSlideDrawings = async (slideIndex) => {
     if (!session || !canvasRef.current) return;
-
     try {
       const res = await api.get(`/live/sessions/${session.sessionId}/slides/${slideIndex}/drawings`);
-      const drawings = res.data;
-
-      // Очистить canvas
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       ctx.currentPaths = {};
-
-      // Отрисовать сохраненные пути
-      drawings.forEach(path => {
+      res.data.forEach((path) => {
+        if (!path.points?.length) return;
         ctx.strokeStyle = path.color;
         ctx.lineWidth = path.width;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-
-        if (path.points && path.points.length > 0) {
-          ctx.moveTo(path.points[0].x, path.points[0].y);
-          for (let i = 1; i < path.points.length; i++) {
-            ctx.lineTo(path.points[i].x, path.points[i].y);
-          }
-          ctx.stroke();
-        }
+        ctx.moveTo(path.points[0].x, path.points[0].y);
+        for (let i = 1; i < path.points.length; i++) ctx.lineTo(path.points[i].x, path.points[i].y);
+        ctx.stroke();
       });
-
-      console.log(`✅ Загружено ${drawings.length} рисунков для слайда ${slideIndex}`);
-    } catch (err) {
-      console.log('Нет сохраненных рисунков для этого слайда');
-      // Очистить canvas если нет рисунков
+    } catch {
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -131,157 +161,199 @@ function LiveLessonTeacher({ tutorId }) {
     }
   };
 
+  // ── Keyboard shortcuts ────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown':
+          e.preventDefault(); handleSlideChangeKbd(1); break;
+        case 'ArrowLeft': case 'ArrowUp':
+          e.preventDefault(); handleSlideChangeKbd(-1); break;
+        case 'p': case 'P': setTool('pen'); break;
+        case 'e': case 'E': setTool('eraser'); break;
+        case 'Escape': setTool('pointer'); break;
+        case 'Delete': case 'Backspace':
+          if (e.shiftKey) handleClearDrawings(); break;
+        default: break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleSlideChangeKbd = (direction) => {
+    const pres = presentationRef.current;
+    const cur = currentSlideRef.current;
+    if (!pres) return;
+    const next = Math.max(0, Math.min(pres.slides.length - 1, cur + direction));
+    clientRef.current?.sendSlideChange(next);
+  };
+
+  // ── WebRTC ────────────────────────────────────────────────────────────
   const handleWebRTCSignal = (data) => {
-    if (data.type === 'signal' && webrtcRef.current) {
+    if (data.role === 'student') {
+      if (!studentRtcRef.current && clientRef.current) {
+        const rtc = new WebRTCService(clientRef.current, null, false, 'teacher');
+        rtc.onRemoteStream = (stream) => {
+          if (studentVideoRef.current) studentVideoRef.current.srcObject = stream;
+          setStudentConnected(true);
+        };
+        rtc.connect();
+        studentRtcRef.current = rtc;
+      }
+      studentRtcRef.current?.handleSignal(data.signal);
+    } else if (data.type === 'signal' && webrtcRef.current) {
       webrtcRef.current.handleSignal(data.signal);
     }
   };
 
+  // ── PDF upload ────────────────────────────────────────────────────────
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !session) return;
-
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       const res = await api.post(`/live/sessions/${session.sessionId}/presentation`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      console.log('✅ Презентация загружена:', res.data);
-      setPresentation({ slides: res.data.slides });
-      setCurrentSlide(0);
-    } catch (err) {
-      alert('❌ Ошибка загрузки презентации');
-      console.error(err);
+      if (res.status === 202) {
+        toast('PDF обрабатывается...');
+      } else {
+        setPresentation({ slides: res.data.slides });
+        setCurrentSlide(0);
+      }
+    } catch {
+      toast.error('Ошибка загрузки PDF');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSlideChange = async (direction) => {
+  // ── Slide navigation ──────────────────────────────────────────────────
+  const handleSlideChange = (direction) => {
     if (!presentation) return;
-
-    const newSlide = Math.max(0, Math.min(presentation.slides.length - 1, currentSlide + direction));
-
-    if (clientRef.current) {
-      clientRef.current.sendSlideChange(newSlide);
-    }
-
-//     setCurrentSlide(newSlide);
+    const next = Math.max(0, Math.min(presentation.slides.length - 1, currentSlide + direction));
+    clientRef.current?.sendSlideChange(next);
   };
 
+  // ── Canvas coordinate helper ──────────────────────────────────────────
+  const getCanvasCoords = (clientX, clientY) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height),
+    };
+  };
+
+  // ── Mouse events ──────────────────────────────────────────────────────
   const handleCanvasMouseDown = (e) => {
-    if (tool === 'pointer') return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
+    if (toolRef.current === 'pointer') return;
+    const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     isDrawingRef.current = true;
     pathIdRef.current = `path-${Date.now()}-${Math.random()}`;
 
-    if (clientRef.current) {
-      clientRef.current.sendDraw({
-        pathId: pathIdRef.current,
-        x,
-        y,
-        color,
-        width: lineWidth,
-        end: false
-      });
-    }
-
-    // Локальная отрисовка
     const ctx = canvasRef.current.getContext('2d');
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    if (toolRef.current === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = lineWidthRef.current * 6;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = colorRef.current;
+      ctx.lineWidth = lineWidthRef.current;
+    }
+
     ctx.beginPath();
     ctx.moveTo(x, y);
+
+    clientRef.current?.sendDraw({
+      pathId: pathIdRef.current, x, y,
+      color: toolRef.current === 'eraser' ? 'eraser' : colorRef.current,
+      width: toolRef.current === 'eraser' ? lineWidthRef.current * 6 : lineWidthRef.current,
+      end: false,
+    });
   };
 
   const handleCanvasMouseMove = (e) => {
     if (!canvasRef.current) return;
+    const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (tool === 'pointer') {
-      if (clientRef.current) {
-        clientRef.current.sendPointer(x, y);
-      }
+    if (toolRef.current === 'pointer') {
+      clientRef.current?.sendPointer(x, y);
       return;
     }
-
     if (!isDrawingRef.current) return;
 
-    if (clientRef.current) {
-      clientRef.current.sendDraw({
-        pathId: pathIdRef.current,
-        x,
-        y,
-        color,
-        width: lineWidth,
-        end: false
-      });
-    }
-
-    // Локальная отрисовка
     const ctx = canvasRef.current.getContext('2d');
     ctx.lineTo(x, y);
     ctx.stroke();
+
+    clientRef.current?.sendDraw({
+      pathId: pathIdRef.current, x, y,
+      color: toolRef.current === 'eraser' ? 'eraser' : colorRef.current,
+      width: toolRef.current === 'eraser' ? lineWidthRef.current * 6 : lineWidthRef.current,
+      end: false,
+    });
   };
 
   const handleCanvasMouseUp = () => {
     if (!isDrawingRef.current) return;
-
     isDrawingRef.current = false;
-
-    if (clientRef.current) {
-      clientRef.current.sendDraw({
-        pathId: pathIdRef.current,
-        x: 0,
-        y: 0,
-        color,
-        width: lineWidth,
-        end: true
-      });
-    }
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) ctx.globalCompositeOperation = 'source-over';
+    clientRef.current?.sendDraw({
+      pathId: pathIdRef.current, x: 0, y: 0,
+      color: colorRef.current, width: lineWidthRef.current, end: true,
+    });
   };
 
+  // ── Touch events ──────────────────────────────────────────────────────
+  const handleCanvasTouchStart = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleCanvasMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
+  };
+  const handleCanvasTouchMove = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleCanvasMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+  };
+  const handleCanvasTouchEnd = (e) => {
+    e.preventDefault();
+    handleCanvasMouseUp();
+  };
+
+  // ── Draw helpers ──────────────────────────────────────────────────────
   const drawOnCanvas = (data) => {
     if (!canvasRef.current) return;
-
     const ctx = canvasRef.current.getContext('2d');
-
     if (data.end) {
-      if (ctx.currentPaths) {
-        delete ctx.currentPaths[data.pathId];
-      }
+      if (ctx.currentPaths) delete ctx.currentPaths[data.pathId];
+      ctx.globalCompositeOperation = 'source-over';
       return;
     }
-
     if (!data.pathId) return;
-
-    // Initialize currentPaths if needed
     if (!ctx.currentPaths) ctx.currentPaths = {};
 
+    const isEraser = data.color === 'eraser';
     if (!ctx.currentPaths[data.pathId]) {
-      // NEW PATH - set all properties fresh
       ctx.currentPaths[data.pathId] = true;
-      ctx.strokeStyle = data.color;
-      ctx.lineWidth = data.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.beginPath();  // ✅ Critical: start new path
+      ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      if (!isEraser) ctx.strokeStyle = data.color;
+      ctx.lineWidth = data.width;
+      ctx.beginPath();
       ctx.moveTo(data.x, data.y);
     } else {
-      // CONTINUE EXISTING PATH
-      ctx.strokeStyle = data.color;  // ✅ Reapply style properties
+      ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      if (!isEraser) ctx.strokeStyle = data.color;
       ctx.lineWidth = data.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -299,33 +371,32 @@ function LiveLessonTeacher({ tutorId }) {
 
   const handleClearDrawings = () => {
     clearCanvas();
-    if (clientRef.current) {
-      clientRef.current.sendClear();
-    }
+    clientRef.current?.sendClear();
   };
 
+  // ── Audio ─────────────────────────────────────────────────────────────
   const toggleAudio = async () => {
     if (!isAudioEnabled) {
-      if (!clientRef.current) {
-        alert('WebSocket не подключен');
-        return;
-      }
-
-      const rtc = new WebRTCService(clientRef.current, session.sessionId, true);
-      const success = await rtc.startAudioStream();
-
-      if (success) {
+      if (!clientRef.current) { toast.error('WebSocket не подключён'); return; }
+      const rtc = new WebRTCService(clientRef.current, session.sessionId, true, 'teacher');
+      rtc.onRemoteStream = (stream) => {
+        const audio = new Audio();
+        audio.srcObject = stream;
+        audio.play().catch(() => {});
+      };
+      const ok = await rtc.startStream({ audio: true, video: false });
+      if (ok) {
         webrtcRef.current = rtc;
         setIsAudioEnabled(true);
       } else {
-        alert('❌ Не удалось получить доступ к микрофону');
+        toast.error(mediaErrorMessage(rtc, 'микрофону'));
       }
     } else {
-      if (webrtcRef.current) {
-        webrtcRef.current.stopAudioStream();
-        webrtcRef.current = null;
-      }
+      webrtcRef.current?.stopStream();
+      webrtcRef.current = null;
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
       setIsAudioEnabled(false);
+      setIsVideoEnabled(false);
       setIsMuted(false);
     }
   };
@@ -337,96 +408,181 @@ function LiveLessonTeacher({ tutorId }) {
     }
   };
 
-  const handleCopyLink = () => {
-    if (session) {
-      const link = `${window.location.origin}/live/student/${session.sessionId}`;
-      navigator.clipboard.writeText(link);
-      alert('✅ Ссылка скопирована!');
+  // ── Camera (independent of mic — starts audio+video together) ────────
+  const toggleCamera = async () => {
+    if (isVideoEnabled) {
+      webrtcRef.current?.toggleVideo();
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      setIsVideoEnabled(false);
+      return;
+    }
+
+    if (!clientRef.current) { toast.error('WebSocket не подключён'); return; }
+    if (!session) return;
+
+    // Stop existing audio-only stream if running
+    if (webrtcRef.current) {
+      webrtcRef.current.stopStream();
+      webrtcRef.current = null;
+      setIsAudioEnabled(false);
+      setIsMuted(false);
+    }
+
+    const rtc = new WebRTCService(clientRef.current, session.sessionId, true, 'teacher');
+    rtc.onRemoteStream = (stream) => {
+      const audio = new Audio();
+      audio.srcObject = stream;
+      audio.play().catch(() => {});
+    };
+    const ok = await rtc.startStream({ audio: true, video: true });
+    if (ok) {
+      webrtcRef.current = rtc;
+      setIsAudioEnabled(true);
+      setIsVideoEnabled(true);
+      // srcObject is assigned via useEffect once the video element mounts
+    } else {
+      toast.error(mediaErrorMessage(rtc, 'камере'));
     }
   };
 
+  // ── End lesson ────────────────────────────────────────────────────────
+  const handleEndLesson = () => {
+    sessionStorage.removeItem('liveSessionId');
+    clientRef.current?.disconnect();
+    webrtcRef.current?.stopStream();
+    studentRtcRef.current?.stopStream();
+    navigate('/home');
+  };
+
+  // ── Copy student link ─────────────────────────────────────────────────
+  const handleCopyLink = () => {
+    if (session) {
+      navigator.clipboard.writeText(`${window.location.origin}/live/student/${session.sessionId}`);
+      toast.success('Ссылка скопирована!');
+    }
+  };
+
+  const getCursor = () => {
+    if (tool === 'pointer') return 'default';
+    if (tool === 'eraser') return 'cell';
+    return 'crosshair';
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="live-lesson-container">
-      {/* Шапка */}
+    <div className="live-lesson-container" role="main" aria-label="Живой урок — преподаватель">
+
+      {/* Header */}
       <div className="live-header">
         <div className="live-header-content">
-          <button
-            onClick={() => navigate('/home')}
-            className="back-button"
-          >
-            ← Назад
+          <h1 className="live-header-title">
+            {studentName ? `Урок — ${studentName}` : 'Живой урок'}
+          </h1>
+
+          <span className={`ws-status ${wsConnected ? 'connected' : ''}`} role="status" aria-live="polite">
+            <span className="ws-dot" />
+            {wsConnected ? 'Подключено' : 'Подключение...'}
+          </span>
+
+          {session && (
+            <button
+              onClick={handleCopyLink}
+              className="share-link-btn"
+              title="Скопировать ссылку для ученика"
+              aria-label="Скопировать ссылку для ученика"
+            >
+              <IconLink />
+              Ссылка
+            </button>
+          )}
+
+          <button onClick={handleEndLesson} className="end-lesson-button" aria-label="Завершить урок">
+            Завершить
           </button>
-          <h1 className="live-header-title">🎥 Живой урок</h1>
         </div>
-        {session && (
-          <div className="student-link-container">
-            <p className="student-link-label">
-              📋 Ссылка для учеников:
-            </p>
-            <div className="student-link-wrapper">
-              <input
-                type="text"
-                readOnly
-                value={`${window.location.origin}/live/student/${session.sessionId}`}
-                onClick={(e) => e.target.select()}
-                className="student-link-input"
-              />
-              <button onClick={handleCopyLink} className="copy-link-button">
-                📋 Копировать
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Панель инструментов */}
-      <div className="live-controls">
+      {/* Toolbar */}
+      <div className="live-controls" role="toolbar" aria-label="Инструменты урока">
         {presentation && (
           <>
-            <div className="slide-controls">
-              <button onClick={() => handleSlideChange(-1)} disabled={currentSlide === 0}>
-                ← Назад
-              </button>
-              <span>
-                {currentSlide + 1} / {presentation.slides.length}
-              </span>
-              <button onClick={() => handleSlideChange(1)} disabled={currentSlide >= presentation.slides.length - 1}>
-                Вперёд →
-              </button>
+            <div className="slide-controls" role="group" aria-label="Навигация по слайдам">
+              <button
+                onClick={() => handleSlideChange(-1)}
+                disabled={currentSlide === 0}
+                aria-label="Предыдущий слайд"
+                title="← (стрелка влево)"
+              >←</button>
+              <span aria-live="polite">{currentSlide + 1} / {presentation.slides.length}</span>
+              <button
+                onClick={() => handleSlideChange(1)}
+                disabled={currentSlide >= presentation.slides.length - 1}
+                aria-label="Следующий слайд"
+                title="→ (стрелка вправо)"
+              >→</button>
             </div>
 
-            <div className="tool-controls">
+            <div className="tool-controls" role="group" aria-label="Инструменты рисования">
               <button
                 className={tool === 'pen' ? 'active' : ''}
                 onClick={() => setTool('pen')}
+                aria-pressed={tool === 'pen'}
+                title="Ручка (P)"
               >
-                ✏️ Ручка
+                <IconPen />
+                <span className="kbd-hint">P</span>
+              </button>
+              <button
+                className={tool === 'eraser' ? 'active' : ''}
+                onClick={() => setTool('eraser')}
+                aria-pressed={tool === 'eraser'}
+                title="Ластик (E)"
+              >
+                <IconEraser />
+                <span className="kbd-hint">E</span>
               </button>
               <button
                 className={tool === 'pointer' ? 'active' : ''}
                 onClick={() => setTool('pointer')}
+                aria-pressed={tool === 'pointer'}
+                title="Указатель (Esc)"
               >
-                👆 Указатель
+                <IconPointer />
+                <span className="kbd-hint">Esc</span>
               </button>
 
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                style={{ width: '50px', height: '38px', cursor: 'pointer', borderRadius: '8px' }}
-              />
+              {tool !== 'eraser' && tool !== 'pointer' && (
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  aria-label="Цвет линии"
+                  title="Цвет"
+                  className="color-picker"
+                />
+              )}
 
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={lineWidth}
-                onChange={(e) => setLineWidth(Number(e.target.value))}
-                style={{ width: '100px' }}
-              />
+              <label className="line-width-label" title={`Толщина: ${lineWidth}px`}>
+                <span className="line-width-value">{lineWidth}</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={lineWidth}
+                  onChange={(e) => setLineWidth(Number(e.target.value))}
+                  aria-label={`Толщина линии: ${lineWidth}`}
+                  className="line-width-slider"
+                />
+              </label>
 
-              <button onClick={handleClearDrawings} style={{ background: '#f44336', color: 'white' }}>
-                🗑️ Очистить
+              <button
+                onClick={handleClearDrawings}
+                className="clear-button"
+                title="Очистить (Shift+Del)"
+                aria-label="Очистить рисунки"
+              >
+                <IconTrash />
+                <span className="kbd-hint">⇧Del</span>
               </button>
             </div>
           </>
@@ -439,70 +595,104 @@ function LiveLessonTeacher({ tutorId }) {
             onChange={handleFileUpload}
             style={{ display: 'none' }}
             id="pdf-upload"
+            disabled={loading}
           />
-          <label htmlFor="pdf-upload" className="pdf-upload-label">
-            {loading ? '⏳ Загрузка...' : '📤 Загрузить PDF'}
+          <label
+            htmlFor="pdf-upload"
+            className="pdf-upload-label"
+            role="button"
+            tabIndex={0}
+            title="Загрузить PDF презентацию"
+            onKeyDown={(e) => e.key === 'Enter' && document.getElementById('pdf-upload').click()}
+          >
+            {loading ? '...' : <><IconUpload /> PDF</>}
           </label>
 
           <button
             onClick={toggleAudio}
             className={`microphone-button ${isAudioEnabled ? 'active' : ''}`}
+            aria-pressed={isAudioEnabled}
+            aria-label={isAudioEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
+            title={isAudioEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
           >
-            {isAudioEnabled ? '🎤 Микрофон вкл' : '🎤 Микрофон'}
+            <IconMic />
+            {isAudioEnabled ? 'Микр. вкл' : 'Микрофон'}
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            className={`camera-button ${isVideoEnabled ? 'active' : ''}`}
+            aria-pressed={isVideoEnabled}
+            aria-label={isVideoEnabled ? 'Выключить камеру' : 'Включить камеру'}
+            title={isVideoEnabled ? 'Выключить камеру' : 'Включить камеру (запустит аудио+видео)'}
+          >
+            <IconCamera />
+            {isVideoEnabled ? 'Кам. вкл' : 'Камера'}
           </button>
 
           {isAudioEnabled && (
             <button
               onClick={toggleMute}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: isMuted ? '#f44336' : '#2196F3',
-                color: 'white',
-                cursor: 'pointer',
-                fontWeight: '600',
-                transition: 'all 0.3s'
-              }}
+              className={`mute-button ${isMuted ? 'muted' : ''}`}
+              aria-pressed={isMuted}
+              aria-label={isMuted ? 'Включить звук' : 'Заглушить'}
+              title={isMuted ? 'Включить звук' : 'Заглушить'}
             >
-              {isMuted ? '🔇' : '🔊'}
+              {isMuted ? <IconMuteOff /> : <IconMuteOn />}
             </button>
           )}
         </div>
       </div>
 
-      {/* Презентация с canvas */}
+      {/* Video strip */}
+      {(isVideoEnabled || studentConnected) && (
+        <div className="video-strip">
+          {isVideoEnabled && (
+            <div className="video-bubble">
+              <video ref={localVideoRef} autoPlay muted playsInline className="video-el" />
+              <span className="video-bubble-label">Вы</span>
+            </div>
+          )}
+          {studentConnected && (
+            <div className="video-bubble">
+              <video ref={studentVideoRef} autoPlay playsInline className="video-el" />
+              <span className="video-bubble-label">Ученик</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Canvas / empty state */}
       {presentation ? (
-        <div className="canvas-container">
+        <div className="canvas-container" ref={containerRef}>
           <img
-            src={`http://localhost:8080${presentation.slides[currentSlide]}`}
-            alt={`Slide ${currentSlide + 1}`}
+            src={`${API_BASE}${presentation.slides[currentSlide]}`}
+            alt={`Слайд ${currentSlide + 1} из ${presentation.slides.length}`}
             className="slide-background"
+            draggable="false"
           />
           <canvas
             ref={canvasRef}
             width={1200}
             height={675}
             className="drawing-canvas"
+            role="application"
+            aria-label={`Холст. Инструмент: ${tool}`}
             onMouseDown={handleCanvasMouseDown}
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseUp}
-            style={{ cursor: tool === 'pointer' ? 'pointer' : 'crosshair' }}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
+            style={{ cursor: getCursor() }}
           />
         </div>
       ) : (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px',
-          background: 'var(--glass-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--glass-border)',
-          color: 'white'
-        }}>
-          <p style={{ fontSize: '20px', margin: 0 }}>
-            📌 Загрузите презентацию, чтобы начать
-          </p>
+        <div className="no-presentation">
+          <div className="no-presentation-icon">📌</div>
+          <p>Загрузите PDF презентацию, чтобы начать урок</p>
+          <p className="no-presentation-hint">Поддерживаются файлы до 10 МБ</p>
         </div>
       )}
     </div>

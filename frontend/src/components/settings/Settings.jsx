@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { tutorApi } from '../../services/api';
 import './Settings.css';
 
@@ -13,8 +14,6 @@ function Settings({ tutorId, onBack }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     loadTutor();
@@ -33,9 +32,8 @@ function Settings({ tutorId, onBack }) {
       if (tutorData.photoUrl) {
         setPhotoPreview(tutorData.photoUrl);
       }
-    } catch (err) {
-      console.error('Ошибка при загрузке данных репетитора:', err);
-      setError('Не удалось загрузить данные');
+    } catch {
+      toast.error('Не удалось загрузить данные профиля');
     } finally {
       setLoading(false);
     }
@@ -62,35 +60,25 @@ function Settings({ tutorId, onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setSaving(true);
 
     try {
       let photoUrl = formData.photoUrl;
 
-      // Загружаем фото, если выбрано новое
       if (photoFile) {
         const uploadResponse = await tutorApi.uploadPhoto(photoFile);
         photoUrl = uploadResponse.data.photoUrl;
       }
 
-      // Обновляем данные репетитора
-      const updateData = {
+      await tutorApi.updateTutor(tutorId, {
         fullName: formData.fullName,
         about: formData.about,
-        photoUrl: photoUrl,
-      };
-
-      await tutorApi.updateTutor(tutorId, updateData);
-      setSuccess('Настройки успешно сохранены');
-      setTimeout(() => {
-        loadTutor();
-        setSuccess('');
-      }, 2000);
-    } catch (err) {
-      console.error('Ошибка при сохранении:', err);
-      setError('Ошибка при сохранении настроек');
+        photoUrl,
+      });
+      toast.success('Настройки сохранены');
+      loadTutor();
+    } catch {
+      toast.error('Ошибка при сохранении настроек');
     } finally {
       setSaving(false);
     }
@@ -166,9 +154,6 @@ function Settings({ tutorId, onBack }) {
               />
             </div>
           </div>
-
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
 
           <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? 'Сохранение...' : 'Сохранить'}
