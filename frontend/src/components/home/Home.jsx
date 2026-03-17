@@ -74,6 +74,7 @@ function Home({ tutorId, onLogout }) {
 
           <nav className="top-nav-links" aria-label="Навигация">
             <span className="nav-link active">Ученики</span>
+            <button className="nav-link nav-link-btn" onClick={() => navigate('/schedule')}>Расписание</button>
           </nav>
 
           <div className="top-nav-actions">

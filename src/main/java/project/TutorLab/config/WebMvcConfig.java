@@ -26,6 +26,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/live/sessions/*/slides/*/drawings",
                         "/api/live/slides/**",
                         "/api/upload/**",
+                        "/api/students/*/view",
                         "/api/students/photos/**",
                         "/api/students/materials/**",
                         "/api/auth/refresh",

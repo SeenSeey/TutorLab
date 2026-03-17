@@ -1,0 +1,319 @@
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.schedule-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-page);
+}
+
+.schedule-content {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+/* ── Navigation ──────────────────────────────────────────────────────── */
+.schedule-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.schedule-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.schedule-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.schedule-nav-brand .brand-logo-mark {
+  width: 34px;
+  height: 34px;
+  background: var(--accent-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+.schedule-nav-brand .brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.schedule-nav-breadcrumb {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-nav-parent {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: color 0.15s;
+}
+
+.schedule-nav-parent:hover { color: var(--text-primary); }
+
+.schedule-nav-sep {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.schedule-nav-current {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.schedule-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────── */
+.schedule-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+}
+
+.schedule-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Filter tabs ─────────────────────────────────────────────────────── */
+.schedule-filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.schedule-tab {
+  background: none;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.schedule-tab:hover { color: var(--text-primary); }
+
+.schedule-tab.active {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* ── Month group ─────────────────────────────────────────────────────── */
+.schedule-month-group {
+  margin-bottom: 36px;
+}
+
+.schedule-month-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 12px;
+}
+
+.schedule-lessons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Lesson row ──────────────────────────────────────────────────────── */
+.schedule-lesson-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.schedule-lesson-row:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 12px rgba(91, 115, 245, 0.1);
+  transform: translateY(-1px);
+}
+
+.schedule-lesson-row.today {
+  border-color: var(--accent-primary);
+  background: rgba(91, 115, 245, 0.04);
+}
+
+/* ── Date column ─────────────────────────────────────────────────────── */
+.schedule-lesson-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.schedule-day {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.schedule-time {
+  font-size: 12px;
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+/* ── Student info ────────────────────────────────────────────────────── */
+.schedule-lesson-student {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.schedule-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.schedule-lesson-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.schedule-student-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-lesson-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Start button ────────────────────────────────────────────────────── */
+.schedule-start-btn {
+  flex-shrink: 0;
+  font-size: 13px;
+  padding: 7px 16px;
+  margin-left: auto;
+}
+
+/* ── Empty / loading ─────────────────────────────────────────────────── */
+.schedule-empty {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .schedule-content { padding: 24px 16px 48px; }
+
+  .schedule-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .schedule-filter-tabs { justify-content: center; }
+
+  .schedule-lesson-date { min-width: 90px; }
+
+  .schedule-lesson-row { gap: 10px; padding: 12px 12px; }
+
+  .schedule-start-btn { padding: 6px 12px; font-size: 12px; }
+}

@@ -9,6 +9,8 @@ import Settings from './components/settings/Settings';
 import StudentDetail from './components/student/StudentDetail';
 import LiveLessonTeacher from './components/live/LiveLessonTeacher';
 import LiveLessonStudent from './components/live/LiveLessonStudent';
+import Schedule from './components/schedule/Schedule';
+import StudentView from './components/studentview/StudentView';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import './App.css';
 
@@ -83,6 +85,13 @@ function AppContent() {
           path="/live/student/:sessionId"
           element={<LiveLessonStudent />}
         />
+        <Route
+          path="/schedule"
+          element={
+            tutorId ? <Schedule tutorId={tutorId} /> : <Navigate to="/home" replace />
+          }
+        />
+        <Route path="/s/:studentId" element={<StudentView />} />
         <Route path="/" element={<Navigate to="/home" replace />} />
       </Routes>
     </div>

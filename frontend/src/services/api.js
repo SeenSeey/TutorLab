@@ -118,6 +118,9 @@ export const studentApi = {
     });
     return response.data.photoUrl;
   },
+  addLessonMaterial: (id, lessonDate, materialUrl) =>
+    api.post(`/students/${id}/lesson-materials`, { lessonDate, materialUrl }),
+  getStudentPublic: (id) => api.get(`/students/${id}/view`),
   uploadMaterial: async (file, tutorId, studentId) => {
     const formData = new FormData();
     formData.append('file', file);

@@ -90,6 +90,11 @@
   font-weight: 600;
 }
 
+.nav-link-btn {
+  background: none;
+  border: none;
+}
+
 .top-nav-actions {
   display: flex;
   align-items: center;

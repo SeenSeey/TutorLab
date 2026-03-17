@@ -1,5 +1,7 @@
 package project.TutorLab.dto;
 
+import java.util.List;
+
 public class StudentCardDto {
     private String id;
     private String firstName;
@@ -7,6 +9,7 @@ public class StudentCardDto {
     private Integer age;
     private String photoUrl;
     private Boolean isFavorite;
+    private List<String> lessonDates;
 
     public StudentCardDto() {
     }
@@ -65,6 +68,14 @@ public class StudentCardDto {
 
     public void setIsFavorite(Boolean isFavorite) {
         this.isFavorite = isFavorite;
+    }
+
+    public List<String> getLessonDates() {
+        return lessonDates;
+    }
+
+    public void setLessonDates(List<String> lessonDates) {
+        this.lessonDates = lessonDates;
     }
 }
 

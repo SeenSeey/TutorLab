@@ -92,6 +92,31 @@ public class StudentController {
         }
     }
 
+    /** Public endpoint — no auth required. Student views their own data via UUID link. */
+    @GetMapping("/{id}/view")
+    public ResponseEntity<StudentResponseDto> getStudentPublic(@PathVariable String id) {
+        StudentResponseDto student = studentService.getStudentById(id);
+        if (student == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(student);
+    }
+
+    @PostMapping("/{id}/lesson-materials")
+    public ResponseEntity<StudentResponseDto> addLessonMaterial(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String lessonDate = request.get("lessonDate");
+            String materialUrl = request.get("materialUrl");
+            if (lessonDate == null || materialUrl == null || lessonDate.isEmpty() || materialUrl.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            StudentResponseDto response = studentService.addLessonMaterial(id, lessonDate, materialUrl);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PostMapping("/{id}/toggle-favorite")
     public ResponseEntity<Void> toggleFavoriteStudent(
             @PathVariable String id,

@@ -1,6 +1,7 @@
 package project.TutorLab.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public class StudentResponseDto {
     private String id;
@@ -11,6 +12,7 @@ public class StudentResponseDto {
     private List<String> interests;
     private List<String> materialUrls;
     private List<String> lessonDates;
+    private Map<String, List<String>> lessonMaterials;
 
     public StudentResponseDto() {
     }
@@ -77,6 +79,14 @@ public class StudentResponseDto {
 
     public void setLessonDates(List<String> lessonDates) {
         this.lessonDates = lessonDates;
+    }
+
+    public Map<String, List<String>> getLessonMaterials() {
+        return lessonMaterials;
+    }
+
+    public void setLessonMaterials(Map<String, List<String>> lessonMaterials) {
+        this.lessonMaterials = lessonMaterials;
     }
 }
 

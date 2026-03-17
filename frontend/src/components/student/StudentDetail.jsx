@@ -79,7 +79,8 @@ function StudentDetail({ tutorId }) {
 
   const handleDateClick = (date, existingLesson) => {
     setSelectedDate(date);
-    setSelectedLesson(existingLesson || null);
+    const lessonMaterials = student?.lessonMaterials?.[date] || [];
+    setSelectedLesson(existingLesson ? { ...existingLesson, materials: lessonMaterials } : null);
     setShowLessonModal(true);
   };
 
@@ -176,6 +177,19 @@ function StudentDetail({ tutorId }) {
           </nav>
 
           <div className="detail-nav-actions">
+            <button
+              className="btn btn-secondary"
+              style={{ fontSize: '13px', padding: '6px 14px' }}
+              onClick={() => {
+                const url = `${window.location.origin}/s/${id}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  toast.success('Ссылка скопирована');
+                });
+              }}
+              title="Скопировать ссылку для ученика"
+            >
+              Поделиться
+            </button>
             <ThemeToggle />
           </div>
         </div>
@@ -282,7 +296,10 @@ function StudentDetail({ tutorId }) {
           <LessonModal
             date={selectedDate}
             lesson={selectedLesson}
+            tutorId={tutorId}
+            studentId={id}
             onSave={handleSaveLesson}
+            onMaterialAdded={loadStudent}
             onClose={() => {
               setShowLessonModal(false);
               setSelectedDate(null);

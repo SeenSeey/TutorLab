@@ -188,3 +188,49 @@
   }
 }
 
+
+/* ── Lesson materials ──────────────────────────────────────────────────── */
+.lesson-materials-section {
+  border-top: 1px solid var(--glass-border);
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
+.lesson-materials-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 10px;
+}
+
+.lesson-materials-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lesson-materials-list a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.lesson-materials-list a:hover {
+  text-decoration: underline;
+}
+
+.lesson-materials-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+.lesson-material-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

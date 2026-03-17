@@ -12,6 +12,7 @@ import project.TutorLab.repository.TutorRepository;
 import project.TutorLab.service.StudentService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,6 +43,7 @@ public class StudentServiceImpl implements StudentService {
         student.setInterests(createDto.getInterests() != null ? createDto.getInterests() : new ArrayList<>());
         student.setMaterialUrls(new ArrayList<>());
         student.setLessonDates(new ArrayList<>());
+        student.setLessonMaterials(new HashMap<>());
         
         studentRepository.save(student);
         
@@ -75,6 +77,7 @@ public class StudentServiceImpl implements StudentService {
             cardDto.setAge(student.getAge());
             cardDto.setPhotoUrl(student.getPhotoUrl());
             cardDto.setIsFavorite(favoriteIds.contains(student.getId()));
+            cardDto.setLessonDates(student.getLessonDates());
             cardDtos.add(cardDto);
         }
         
@@ -119,6 +122,22 @@ public class StudentServiceImpl implements StudentService {
         student.getLessonDates().add(lessonDate);
         studentRepository.save(student);
         
+        return convertToResponseDto(student);
+    }
+
+    @Override
+    public StudentResponseDto addLessonMaterial(String studentId, String lessonDate, String materialUrl) {
+        Student student = studentRepository.findById(studentId);
+        if (student == null) {
+            throw new IllegalArgumentException("Student with id " + studentId + " does not exist");
+        }
+        if (student.getLessonMaterials() == null) {
+            student.setLessonMaterials(new HashMap<>());
+        }
+        student.getLessonMaterials()
+               .computeIfAbsent(lessonDate, k -> new ArrayList<>())
+               .add(materialUrl);
+        studentRepository.save(student);
         return convertToResponseDto(student);
     }
 
@@ -179,6 +198,7 @@ public class StudentServiceImpl implements StudentService {
         dto.setInterests(student.getInterests());
         dto.setMaterialUrls(student.getMaterialUrls());
         dto.setLessonDates(student.getLessonDates());
+        dto.setLessonMaterials(student.getLessonMaterials());
         return dto;
     }
 }
